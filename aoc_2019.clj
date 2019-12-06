@@ -1,7 +1,8 @@
 (ns aoc-2019
   (:require [clojure.string :as str]
             [clojure.edn :as edn]
-            [clojure.test :refer [deftest is]]))
+            [clojure.test :refer [deftest is]]
+            [clojure.set :as set]))
 
 (defn fuel
   [mass]
@@ -82,3 +83,50 @@
          :when (= 19690720 (first (day-2 updated-input)))]
      (+ (* 100 noun) verb))))
 #_(day-2-2 (read-nums (slurp "day-2.txt")))
+
+(defn right [[x y]] [(inc x) y])
+(defn up    [[x y]] [x (inc y)])
+(defn left  [[x y]] [(dec x) y])
+(defn down  [[x y]] [x (dec y)])
+
+(def get-move-fn
+  {\R right
+   \U up
+   \L left
+   \D down})
+
+(defn read-move
+  [[dir & chars]]
+  (repeat (Integer/parseInt (str/join chars)) (get-move-fn dir)))
+
+(defn read-path
+  [s]
+  (mapcat read-move (str/split s #",")))
+
+(defn eval-path
+  [start path]
+  (reductions (fn [pos move-fn]
+                (move-fn pos))
+              start
+              path))
+
+(defn day-3
+  [input]
+  (let [[w1 w2] (str/split-lines input)
+        intersections (disj (set/intersection
+                             (set (eval-path [0 0] (read-path w1)))
+                             (set (eval-path [0 0] (read-path w2))))
+                            [0 0])
+        distances (map (fn [[x y]] (+ (Math/abs x) (Math/abs y))) intersections)]
+    (apply min distances)))
+
+(deftest day-3-test
+  (is (= (repeat 2 right) (read-move "R2")))
+  (is (= [up up down down left right left right] (read-path "U2,D2,L1,R1,L1,R1")))
+  (is (= [[0 0] [0 1] [0 2] [0 1] [0 0] [-1 0] [0 0] [-1 0] [0 0]]
+         (eval-path [0 0] (read-path "U2,D2,L1,R1,L1,R1"))))
+  (is (= 159 (day-3 "R75,D30,R83,U83,L12,D49,R71,U7,L72
+U62,R66,U55,R34,D71,R55,D58,R83")))
+  (is (= 135 (day-3 "R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51
+U98,R91,D20,R16,D67,R40,U7,R15,U6,R7"))))
+#_(day-3 (slurp "day-3.txt"))
