@@ -2,7 +2,8 @@
   (:require [clojure.string :as str]
             [clojure.edn :as edn]
             [clojure.test :refer [deftest is]]
-            [clojure.set :as set]))
+            [clojure.set :as set]
+            [clojure.tools.trace :refer [deftrace]]))
 
 (defn fuel
   [mass]
@@ -110,14 +111,17 @@
               start
               path))
 
+(defn find-intersections
+  [p1 p2]
+  (disj (set/intersection (set p1) (set p2))
+        [0 0]))
+
 (defn day-3
   [input]
   (let [[w1 w2] (str/split-lines input)
-        intersections (disj (set/intersection
-                             (set (eval-path [0 0] (read-path w1)))
-                             (set (eval-path [0 0] (read-path w2))))
-                            [0 0])
-        distances (map (fn [[x y]] (+ (Math/abs x) (Math/abs y))) intersections)]
+        p1 (eval-path [0 0] (read-path w1))
+        p2 (eval-path [0 0] (read-path w2))
+        distances (map (fn [[x y]] (+ (Math/abs x) (Math/abs y))) (find-intersections p1 p2))]
     (apply min distances)))
 
 (deftest day-3-test
@@ -130,3 +134,82 @@ U62,R66,U55,R34,D71,R55,D58,R83")))
   (is (= 135 (day-3 "R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51
 U98,R91,D20,R16,D67,R40,U7,R15,U6,R7"))))
 #_(day-3 (slurp "day-3.txt"))
+
+(defn intersection-distances
+  [intersections path]
+  (let [result (->> path
+                  (map-indexed vector)
+                  (filter #(contains? intersections (second %))))]
+    (assert (= (count intersections) (count result))
+            "Danger: intersections were crossed multiple times.")
+    result))
+
+(defn day-3-2
+  [input]
+  (let [[w1 w2] (str/split-lines input)
+        p1 (eval-path [0 0] (read-path w1))
+        p2 (eval-path [0 0] (read-path w2))
+        intersections (find-intersections p1 p2)
+        p1-distances (intersection-distances intersections p1)
+        p2-distances (intersection-distances intersections p2)]
+    (apply min
+           (for [[dist1 loc1] p1-distances
+                 [dist2 loc2] p2-distances
+                 :when (= loc1 loc2)]
+             (+ dist1 dist2)))))
+
+(deftest day-3-2-test
+  (is (= 610 (day-3-2 "R75,D30,R83,U83,L12,D49,R71,U7,L72
+U62,R66,U55,R34,D71,R55,D58,R83")))
+  (is (= 410 (day-3-2 "R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51
+U98,R91,D20,R16,D67,R40,U7,R15,U6,R7"))))
+#_(day-3-2 (slurp "day-3.txt"))
+
+(def char->int
+  (reduce (fn [m n]
+            (assoc m (first (str n)) n))
+          {}
+          (range 10)))
+
+(defn day-4
+  [n]
+  (let [s (str n)
+        digits (mapv char->int s)
+        six-digits? (= 6 (count digits))
+        has-adjacent? (some true? (map = digits (rest digits)))
+        never-decreases? (reduce (fn [a b]
+                                   (and a (<= a b) b))
+                                 digits)]
+    (and six-digits?
+         has-adjacent?
+         never-decreases?)))
+
+(deftest day-4-test
+  (is (day-4 111111))
+  (is (not (day-4 223450)))
+  (is (not (day-4 123789)))
+  (is (not (day-4 111101)))
+  (is (= 2 (count (filter day-4 (range 122343 122346))))))
+#_(count (filter day-4 (range 359282 820401)))
+
+(defn day-4-2
+  [n]
+  (let [s (str n)
+        digits (mapv char->int s)
+        six-digits? (= 6 (count digits))
+        has-adjacent? (->> digits
+                           frequencies
+                           vals
+                           (some #(= 2 %)))
+        never-decreases? (reduce (fn [a b]
+                                   (and a (<= a b) b))
+                                 digits)]
+    (and six-digits?
+         has-adjacent?
+         never-decreases?)))
+
+(deftest day-4-2-test
+  (is (day-4-2 112233))
+  (is (not (day-4-2 123444)))
+  (is (day-4-2 111122)))
+#_(count (filter day-4-2 (range 359282 820401)))
