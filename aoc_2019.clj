@@ -213,3 +213,47 @@ U98,R91,D20,R16,D67,R40,U7,R15,U6,R7"))))
   (is (not (day-4-2 123444)))
   (is (day-4-2 111122)))
 #_(count (filter day-4-2 (range 359282 820401)))
+
+(defn read-expr
+  [{:keys [pos data] :as env}]
+  (let [op (get data pos)
+        num-args {1 3
+                  2 3
+                  3 1
+                  4 1
+                  99 0}]
+    (take (inc (get num-args op)) (drop pos data))))
+
+(defn eval-expr
+  [{:keys [pos data] :as env} [op & args :as expr]]
+  (case op
+    1 (let [[k1 k2 out] args]
+        (assoc env
+               :data (run-op data + k1 k2 out)
+               :pos (+ pos 4)))
+    2 (let [[k1 k2 out] args]
+        (assoc env
+               :data (run-op data * k1 k2 out)
+               :pos (+ pos 4)))
+    99 (assoc env :done true)
+    (throw (Exception. (str "Unrecognized expression: " expr)))))
+
+(defn day-5
+  [input]
+  (loop [env {:pos 0
+              :data input}]
+    (if (:done env)
+      (:data env)
+      (recur (eval-expr env (read-expr env))))))
+
+(deftest day-5-test
+  (is (= [2,0,0,0,99] (day-5 (read-nums "1,0,0,0,99"))))
+  (is (= [2,3,0,6,99] (day-5 (read-nums "2,3,0,3,99"))))
+  (is (= [2,4,4,5,99,9801] (day-5 (read-nums "2,4,4,5,99,0"))))
+  (is (= [30,1,1,4,2,5,6,0,99] (day-5 (read-nums "1,1,1,4,99,5,6,0,99"))))
+  (is (= 3085697 (-> (slurp "day-2.txt")
+                     read-nums
+                     (assoc 1 12)
+                     (assoc 2 2)
+                     day-5
+                     first))))
