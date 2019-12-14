@@ -264,12 +264,12 @@ U98,R91,D20,R16,D67,R40,U7,R15,U6,R7"))))
           (assoc env
                  :data (assoc data dest (* a b))
                  :pos next-pos))
-      3 (let [[dest] loaded-args]
+      3 (let [[dest] raw-args]
           (assoc env
                  :in (pop in)
                  :data (assoc data dest (peek in))
                  :pos next-pos))
-      4 (let [[src] loaded-args]
+      4 (let [[src] raw-args]
           (assoc env
                  :out (conj out (get data src))
                  :pos next-pos))
