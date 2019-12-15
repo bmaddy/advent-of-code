@@ -46,7 +46,7 @@
         b (get data k2)]
     (assoc data out (f a b))))
 
-(defn read-nums
+(defn read-syms
   [s]
   (edn/read-string (str "[" s "]")))
 
@@ -62,12 +62,12 @@
         (recur next-pos (run-op data op k1 k2 out))))))
 
 (deftest day-2-test
-  (is (= [2,0,0,0,99] (day-2 (read-nums "1,0,0,0,99"))))
-  (is (= [2,3,0,6,99] (day-2 (read-nums "2,3,0,3,99"))))
-  (is (= [2,4,4,5,99,9801] (day-2 (read-nums "2,4,4,5,99,0"))))
-  (is (= [30,1,1,4,2,5,6,0,99] (day-2 (read-nums "1,1,1,4,99,5,6,0,99"))))
+  (is (= [2,0,0,0,99] (day-2 (read-syms "1,0,0,0,99"))))
+  (is (= [2,3,0,6,99] (day-2 (read-syms "2,3,0,3,99"))))
+  (is (= [2,4,4,5,99,9801] (day-2 (read-syms "2,4,4,5,99,0"))))
+  (is (= [30,1,1,4,2,5,6,0,99] (day-2 (read-syms "1,1,1,4,99,5,6,0,99"))))
   (is (= 3085697 (-> (slurp "day-2.txt")
-                     read-nums
+                     read-syms
                      (assoc 1 12)
                      (assoc 2 2)
                      day-2
@@ -85,7 +85,7 @@
      (+ (* 100 noun) verb))))
 
 (deftest day-2-2-test
-  (is (= 9425 (day-2-2 (read-nums (slurp "day-2.txt"))))))
+  (is (= 9425 (day-2-2 (read-syms (slurp "day-2.txt"))))))
 
 (defn right [[x y]] [(inc x) y])
 (defn up    [[x y]] [x (inc y)])
@@ -309,51 +309,120 @@ U98,R91,D20,R16,D67,R40,U7,R15,U6,R7")))
 
 (deftest day-5-test
   (testing "day-2 tests"
-    (is (= [2,0,0,0,99] (:data (day-5 (read-nums "1,0,0,0,99")))))
-    (is (= [2,3,0,6,99] (:data (day-5 (read-nums "2,3,0,3,99")))))
-    (is (= [2,4,4,5,99,9801] (:data (day-5 (read-nums "2,4,4,5,99,0")))))
-    (is (= [30,1,1,4,2,5,6,0,99] (:data (day-5 (read-nums "1,1,1,4,99,5,6,0,99")))))
+    (is (= [2,0,0,0,99] (:data (day-5 (read-syms "1,0,0,0,99")))))
+    (is (= [2,3,0,6,99] (:data (day-5 (read-syms "2,3,0,3,99")))))
+    (is (= [2,4,4,5,99,9801] (:data (day-5 (read-syms "2,4,4,5,99,0")))))
+    (is (= [30,1,1,4,2,5,6,0,99] (:data (day-5 (read-syms "1,1,1,4,99,5,6,0,99")))))
     (is (= 3085697 (-> (slurp "day-2.txt")
-                       read-nums
+                       read-syms
                        (assoc 1 12)
                        (assoc 2 2)
                        day-5
                        :data
                        first))))
   (testing "part one"
-    (is (= [1234] (:out (day-5 (read-nums "3,0,4,0,99") [1234]))))
+    (is (= [1234] (:out (day-5 (read-syms "3,0,4,0,99") [1234]))))
     (is (= [2 0 1 0] (take 4 (read-instruction 1002))))
-    (is (= [1002 4 3 4 99] (:data (day-5 (read-nums "1002,4,3,4,33")))))
-    (is (= [11002 4 3 4 99] (:data (day-5 (read-nums "11002,4,3,4,33")))))
-    (is (= [1101 100 -1 4 99] (:data (day-5 (read-nums "1101,100,-1,4,0")))))
-    (is (->> (day-5 (read-nums (slurp "day-5.txt")) [1])
+    (is (= [1002 4 3 4 99] (:data (day-5 (read-syms "1002,4,3,4,33")))))
+    (is (= [11002 4 3 4 99] (:data (day-5 (read-syms "11002,4,3,4,33")))))
+    (is (= [1101 100 -1 4 99] (:data (day-5 (read-syms "1101,100,-1,4,0")))))
+    (is (->> (day-5 (read-syms (slurp "day-5.txt")) [1])
              :out
              butlast
              (every? zero?)))
-    (is (= 16574641 (-> (day-5 (read-nums (slurp "day-5.txt")) [1])
+    (is (= 16574641 (-> (day-5 (read-syms (slurp "day-5.txt")) [1])
                         :out
                         last))))
   (testing "part two"
     (testing "input equals 8"
-      (is (= 1 (first (:out (day-5 (read-nums "3,9,8,9,10,9,4,9,99,-1,8") [8])))))
-      (is (= 0 (first (:out (day-5 (read-nums "3,9,8,9,10,9,4,9,99,-1,8") [7])))))
-      (is (= 1 (first (:out (day-5 (read-nums "3,3,1108,-1,8,3,4,3,99") [8])))))
-      (is (= 0 (first (:out (day-5 (read-nums "3,3,1108,-1,8,3,4,3,99") [7]))))))
+      (is (= 1 (first (:out (day-5 (read-syms "3,9,8,9,10,9,4,9,99,-1,8") [8])))))
+      (is (= 0 (first (:out (day-5 (read-syms "3,9,8,9,10,9,4,9,99,-1,8") [7])))))
+      (is (= 1 (first (:out (day-5 (read-syms "3,3,1108,-1,8,3,4,3,99") [8])))))
+      (is (= 0 (first (:out (day-5 (read-syms "3,3,1108,-1,8,3,4,3,99") [7]))))))
     (testing "input is less than 8"
-      (is (= 1 (first (:out (day-5 (read-nums "3,9,7,9,10,9,4,9,99,-1,8") [7])))))
-      (is (= 0 (first (:out (day-5 (read-nums "3,9,7,9,10,9,4,9,99,-1,8") [8])))))
-      (is (= 1 (first (:out (day-5 (read-nums "3,3,1107,-1,8,3,4,3,99") [7])))))
-      (is (= 0 (first (:out (day-5 (read-nums "3,3,1107,-1,8,3,4,3,99") [8]))))))
+      (is (= 1 (first (:out (day-5 (read-syms "3,9,7,9,10,9,4,9,99,-1,8") [7])))))
+      (is (= 0 (first (:out (day-5 (read-syms "3,9,7,9,10,9,4,9,99,-1,8") [8])))))
+      (is (= 1 (first (:out (day-5 (read-syms "3,3,1107,-1,8,3,4,3,99") [7])))))
+      (is (= 0 (first (:out (day-5 (read-syms "3,3,1107,-1,8,3,4,3,99") [8]))))))
     (testing "jump-tests; test if input is non-zero"
-      (is (= 1 (first (:out (day-5 (read-nums "3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9") [8])))))
-      (is (= 0 (first (:out (day-5 (read-nums "3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9") [0])))))
-      (is (= 1 (first (:out (day-5 (read-nums "3,3,1105,-1,9,1101,0,0,12,4,12,99,1") [8])))))
-      (is (= 0 (first (:out (day-5 (read-nums "3,3,1105,-1,9,1101,0,0,12,4,12,99,1") [0]))))))
+      (is (= 1 (first (:out (day-5 (read-syms "3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9") [8])))))
+      (is (= 0 (first (:out (day-5 (read-syms "3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9") [0])))))
+      (is (= 1 (first (:out (day-5 (read-syms "3,3,1105,-1,9,1101,0,0,12,4,12,99,1") [8])))))
+      (is (= 0 (first (:out (day-5 (read-syms "3,3,1105,-1,9,1101,0,0,12,4,12,99,1") [0]))))))
     (testing "larger example that is a funny comparator for the number 8"
-      (let [program (read-nums "3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,31,
+      (let [program (read-syms "3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,31,
 1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,
 999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99")]
         (is (= 999 (first (:out (day-5 program [7])))))
         (is (= 1000 (first (:out (day-5 program [8])))))
         (is (= 1001 (first (:out (day-5 program [9])))))))
-    (is (= 15163975 (first (:out (day-5 (read-nums (slurp "day-5.txt")) [5])))))))
+    (is (= 15163975 (first (:out (day-5 (read-syms (slurp "day-5.txt")) [5])))))))
+
+(defn parse-orbital-map
+  [input]
+  (->> (str/split input #"[\)\s]+")
+       (partition 2)
+       (mapv (comp vec reverse))
+       (into {})))
+
+(defn count-ancestors
+  [get-parent node]
+  (->> node
+       (iterate get-parent)
+       rest
+       (take-while some?)
+       count))
+
+(defn day-6
+  [input]
+  (let [child->parent (parse-orbital-map input)
+        satellites (keys child->parent)]
+    (->> satellites
+         (map #(count-ancestors child->parent %))
+         (reduce +))))
+
+(deftest day-6-test
+  (is (= 42 (day-6 "COM)B
+B)C
+C)D
+D)E
+E)F
+B)G
+G)H
+D)I
+E)J
+J)K
+K)L")))
+  (is (= 1 (day-6 "COM)97W")))
+  (is (= 142497 (day-6 (slurp "day-6.txt")))))
+
+(defn drop-while-same
+  [[a & a-tail :as as] [b & b-tail :as bs]]
+  (if (= a b)
+    (recur a-tail b-tail)
+    [as bs]))
+
+(defn day-6-2
+  [input]
+  (let [child->parent (parse-orbital-map input)
+        you-path (reverse (take-while some? (iterate child->parent "YOU")))
+        san-path (reverse (take-while some? (iterate child->parent "SAN")))]
+    (->> (drop-while-same (butlast you-path) (butlast san-path))
+         (apply concat)
+         count)))
+
+(deftest day-6-2-test
+  (is (= 4 (day-6-2 "COM)B
+B)C
+C)D
+D)E
+E)F
+B)G
+G)H
+D)I
+E)J
+J)K
+K)L
+K)YOU
+I)SAN")))
+  (is (= 301 (day-6-2 (slurp "day-6.txt")))))
