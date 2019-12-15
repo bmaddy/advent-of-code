@@ -1,7 +1,7 @@
 (ns aoc-2019
   (:require [clojure.string :as str]
             [clojure.edn :as edn]
-            [clojure.test :refer [deftest is run-tests]]
+            [clojure.test :refer [deftest is run-tests testing]]
             [clojure.set :as set]
             [clojure.tools.trace :refer [deftrace]]))
 
@@ -20,8 +20,8 @@
   (is (= 2 (day-1-1 "12")))
   (is (= 2 (day-1-1 "14")))
   (is (= 654 (day-1-1 "1969")))
-  (is (= 33583 (day-1-1 "100756"))))
-#_(day-1-1 (slurp "day-1.txt"))
+  (is (= 33583 (day-1-1 "100756")))
+  (is (= 3252208 (day-1-1 (slurp "day-1.txt")))))
 
 (defn day-1-2
   [input]
@@ -37,8 +37,8 @@
 (deftest day-1-2-test
   (is (= 2 (day-1-2 "14")))
   (is (= 966 (day-1-2 "1969")))
-  (is (= 50346 (day-1-2 "100756"))))
-#_(day-1-2 (slurp "day-1.txt"))
+  (is (= 50346 (day-1-2 "100756")))
+  (is (= 4875451 (day-1-2 (slurp "day-1.txt")))))
 
 (defn run-op
   [data f k1 k2 out]
@@ -65,13 +65,13 @@
   (is (= [2,0,0,0,99] (day-2 (read-nums "1,0,0,0,99"))))
   (is (= [2,3,0,6,99] (day-2 (read-nums "2,3,0,3,99"))))
   (is (= [2,4,4,5,99,9801] (day-2 (read-nums "2,4,4,5,99,0"))))
-  (is (= [30,1,1,4,2,5,6,0,99] (day-2 (read-nums "1,1,1,4,99,5,6,0,99")))))
-#_(-> (slurp "day-2.txt")
-      read-nums
-      (assoc 1 12)
-      (assoc 2 2)
-      day-2
-      first)
+  (is (= [30,1,1,4,2,5,6,0,99] (day-2 (read-nums "1,1,1,4,99,5,6,0,99"))))
+  (is (= 3085697 (-> (slurp "day-2.txt")
+                     read-nums
+                     (assoc 1 12)
+                     (assoc 2 2)
+                     day-2
+                     first))))
 
 (defn day-2-2
   [input]
@@ -83,7 +83,9 @@
                                  (assoc 2 verb))]
          :when (= 19690720 (first (day-2 updated-input)))]
      (+ (* 100 noun) verb))))
-#_(day-2-2 (read-nums (slurp "day-2.txt")))
+
+(deftest day-2-2-test
+  (is (= 9425 (day-2-2 (read-nums (slurp "day-2.txt"))))))
 
 (defn right [[x y]] [(inc x) y])
 (defn up    [[x y]] [x (inc y)])
@@ -132,8 +134,8 @@
   (is (= 159 (day-3 "R75,D30,R83,U83,L12,D49,R71,U7,L72
 U62,R66,U55,R34,D71,R55,D58,R83")))
   (is (= 135 (day-3 "R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51
-U98,R91,D20,R16,D67,R40,U7,R15,U6,R7"))))
-#_(day-3 (slurp "day-3.txt"))
+U98,R91,D20,R16,D67,R40,U7,R15,U6,R7")))
+  (is (= 260 (day-3 (slurp "day-3.txt")))))
 
 (defn intersection-distances
   [intersections path]
@@ -162,8 +164,8 @@ U98,R91,D20,R16,D67,R40,U7,R15,U6,R7"))))
   (is (= 610 (day-3-2 "R75,D30,R83,U83,L12,D49,R71,U7,L72
 U62,R66,U55,R34,D71,R55,D58,R83")))
   (is (= 410 (day-3-2 "R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51
-U98,R91,D20,R16,D67,R40,U7,R15,U6,R7"))))
-#_(day-3-2 (slurp "day-3.txt"))
+U98,R91,D20,R16,D67,R40,U7,R15,U6,R7")))
+  (is (= 15612 (day-3-2 (slurp "day-3.txt")))))
 
 (def char->int
   (reduce (fn [m n]
@@ -189,8 +191,8 @@ U98,R91,D20,R16,D67,R40,U7,R15,U6,R7"))))
   (is (not (day-4 223450)))
   (is (not (day-4 123789)))
   (is (not (day-4 111101)))
-  (is (= 2 (count (filter day-4 (range 122343 122346))))))
-#_(count (filter day-4 (range 359282 820401)))
+  (is (= 2 (count (filter day-4 (range 122343 122346)))))
+  (is (= 511 (count (filter day-4 (range 359282 820401))))))
 
 (defn day-4-2
   [n]
@@ -211,8 +213,8 @@ U98,R91,D20,R16,D67,R40,U7,R15,U6,R7"))))
 (deftest day-4-2-test
   (is (day-4-2 112233))
   (is (not (day-4-2 123444)))
-  (is (day-4-2 111122)))
-#_(count (filter day-4-2 (range 359282 820401)))
+  (is (day-4-2 111122))
+  (is (= 316 (count (filter day-4-2 (range 359282 820401))))))
 
 (defn read-instruction
   "Given a number, returns the last two digits as a num, then each subsequent
@@ -254,49 +256,66 @@ U98,R91,D20,R16,D67,R40,U7,R15,U6,R7"))))
   [{:keys [pos data in out] :as env} {:keys [op arity raw-args loaded-args] :as expr}]
   (let [next-pos (+ pos (inc arity))]
     (case op
+      ;; add
       1 (let [[a b] loaded-args
               dest (last raw-args)]
           (assoc env
                  :data (assoc data dest (+ a b))
                  :pos next-pos))
+      ;; mult
       2 (let [[a b] loaded-args
               dest (last raw-args)]
           (assoc env
                  :data (assoc data dest (* a b))
                  :pos next-pos))
+      ;; read
       3 (let [[dest] raw-args]
           (assoc env
                  :in (pop in)
                  :data (assoc data dest (peek in))
                  :pos next-pos))
-      4 (let [[src] raw-args]
+      ;; write
+      4 (let [[value] loaded-args]
           (assoc env
-                 :out (conj out (get data src))
+                 :out (conj out value)
                  :pos next-pos))
+      ;; quit
       99 (assoc env :done true)
       (throw (Exception. (str "Unrecognized op for expression: " expr))))))
 
 (defn day-5
-  [program input]
-  (loop [env {:pos 0
-              :data program
-              :in (into (clojure.lang.PersistentQueue/EMPTY) input)
-              :out (clojure.lang.PersistentQueue/EMPTY)}]
-    (if (:done env)
-      env
-      (recur (eval-expr env (read-expr env))))))
+  ([program] (day-5 program []))
+  ([program input]
+   (loop [env {:pos 0
+               :data program
+               :in (into (clojure.lang.PersistentQueue/EMPTY) input)
+               :out (clojure.lang.PersistentQueue/EMPTY)}]
+     (if (:done env)
+       env
+       (recur (eval-expr env (read-expr env)))))))
 
 (deftest day-5-test
-  (is (= [2,0,0,0,99] (:data (day-5 (read-nums "1,0,0,0,99") []))))
-  (is (= [2,3,0,6,99] (:data (day-5 (read-nums "2,3,0,3,99") []))))
-  (is (= [2,4,4,5,99,9801] (:data (day-5 (read-nums "2,4,4,5,99,0") []))))
-  (is (= [30,1,1,4,2,5,6,0,99] (:data (day-5 (read-nums "1,1,1,4,99,5,6,0,99") []))))
-  (is (= 3085697 (-> (slurp "day-2.txt")
-                     read-nums
-                     (assoc 1 12)
-                     (assoc 2 2)
-                     (day-5 [])
-                     :data
-                     first)))
+  (testing "day-2 tests"
+    (is (= [2,0,0,0,99] (:data (day-5 (read-nums "1,0,0,0,99")))))
+    (is (= [2,3,0,6,99] (:data (day-5 (read-nums "2,3,0,3,99")))))
+    (is (= [2,4,4,5,99,9801] (:data (day-5 (read-nums "2,4,4,5,99,0")))))
+    (is (= [30,1,1,4,2,5,6,0,99] (:data (day-5 (read-nums "1,1,1,4,99,5,6,0,99")))))
+    (is (= 3085697 (-> (slurp "day-2.txt")
+                       read-nums
+                       (assoc 1 12)
+                       (assoc 2 2)
+                       day-5
+                       :data
+                       first))))
   (is (= [1234] (:out (day-5 (read-nums "3,0,4,0,99") [1234]))))
-  (is (= [2 0 1 0] (take 4 (read-instruction 1002)))))
+  (is (= [2 0 1 0] (take 4 (read-instruction 1002))))
+  (is (= [1002 4 3 4 99] (:data (day-5 (read-nums "1002,4,3,4,33")))))
+  (is (= [11002 4 3 4 99] (:data (day-5 (read-nums "11002,4,3,4,33")))))
+  (is (= [1101 100 -1 4 99] (:data (day-5 (read-nums "1101,100,-1,4,0")))))
+  (is (->> (day-5 (read-nums (slurp "day-5.txt")) [1])
+           :out
+           butlast
+           (every? zero?)))
+  (is (= 16574641 (-> (day-5 (read-nums (slurp "day-5.txt")) [1])
+                      :out
+                      last))))
