@@ -232,8 +232,14 @@ U98,R91,D20,R16,D67,R40,U7,R15,U6,R7")))
                    2 3
                    3 1
                    4 1
+                   5 2
+                   6 2
+                   7 3
+                   8 3
                    99 0}
         arity (op->arity op)
+        _ (when (nil? arity)
+            (throw (Exception. (str "Arity not found for op " op))))
         arg-loaders (take arity
                           (map {0 #(get data %)
                                 1 identity}
@@ -254,34 +260,41 @@ U98,R91,D20,R16,D67,R40,U7,R15,U6,R7")))
 
 (defn eval-expr
   [{:keys [pos data in out] :as env} {:keys [op arity raw-args loaded-args] :as expr}]
-  (let [next-pos (+ pos (inc arity))]
-    (case op
-      ;; add
-      1 (let [[a b] loaded-args
-              dest (last raw-args)]
-          (assoc env
-                 :data (assoc data dest (+ a b))
-                 :pos next-pos))
-      ;; mult
-      2 (let [[a b] loaded-args
-              dest (last raw-args)]
-          (assoc env
-                 :data (assoc data dest (* a b))
-                 :pos next-pos))
-      ;; read
-      3 (let [[dest] raw-args]
-          (assoc env
-                 :in (pop in)
-                 :data (assoc data dest (peek in))
-                 :pos next-pos))
-      ;; write
-      4 (let [[value] loaded-args]
-          (assoc env
-                 :out (conj out value)
-                 :pos next-pos))
-      ;; quit
-      99 (assoc env :done true)
-      (throw (Exception. (str "Unrecognized op for expression: " expr))))))
+  (let [next-pos (+ pos (inc arity))
+        updates (case op
+                  ;; add
+                  1 (let [[a b] loaded-args
+                          dest (last raw-args)]
+                      {:data (assoc data dest (+ a b))})
+                  ;; mult
+                  2 (let [[a b] loaded-args
+                          dest (last raw-args)]
+                      {:data (assoc data dest (* a b))})
+                  ;; read
+                  3 (let [[dest] raw-args]
+                      {:in (pop in)
+                       :data (assoc data dest (peek in))})
+                  ;; write
+                  4 (let [[value] loaded-args]
+                      {:out (conj out value)})
+                  ;; jump-if-true
+                  5 (let [[test jump-pos] loaded-args]
+                      (when-not (zero? test) {:pos jump-pos}))
+                  ;; jump-if-else
+                  6 (let [[test jump-pos] loaded-args]
+                      (when (zero? test) {:pos jump-pos}))
+                  ;; less than
+                  7 (let [[a b] loaded-args
+                          dest (last raw-args)]
+                      {:data (assoc data dest (if (< a b) 1 0))})
+                  ;; equal
+                  8 (let [[a b] loaded-args
+                          dest (last raw-args)]
+                      {:data (assoc data dest (if (= a b) 1 0))})
+                  ;; quit
+                  99 {:done true}
+                  (throw (Exception. (str "Unrecognized op for expression: " expr))))]
+    (merge env {:pos next-pos} updates)))
 
 (defn day-5
   ([program] (day-5 program []))
@@ -307,15 +320,40 @@ U98,R91,D20,R16,D67,R40,U7,R15,U6,R7")))
                        day-5
                        :data
                        first))))
-  (is (= [1234] (:out (day-5 (read-nums "3,0,4,0,99") [1234]))))
-  (is (= [2 0 1 0] (take 4 (read-instruction 1002))))
-  (is (= [1002 4 3 4 99] (:data (day-5 (read-nums "1002,4,3,4,33")))))
-  (is (= [11002 4 3 4 99] (:data (day-5 (read-nums "11002,4,3,4,33")))))
-  (is (= [1101 100 -1 4 99] (:data (day-5 (read-nums "1101,100,-1,4,0")))))
-  (is (->> (day-5 (read-nums (slurp "day-5.txt")) [1])
-           :out
-           butlast
-           (every? zero?)))
-  (is (= 16574641 (-> (day-5 (read-nums (slurp "day-5.txt")) [1])
-                      :out
-                      last))))
+  (testing "part one"
+    (is (= [1234] (:out (day-5 (read-nums "3,0,4,0,99") [1234]))))
+    (is (= [2 0 1 0] (take 4 (read-instruction 1002))))
+    (is (= [1002 4 3 4 99] (:data (day-5 (read-nums "1002,4,3,4,33")))))
+    (is (= [11002 4 3 4 99] (:data (day-5 (read-nums "11002,4,3,4,33")))))
+    (is (= [1101 100 -1 4 99] (:data (day-5 (read-nums "1101,100,-1,4,0")))))
+    (is (->> (day-5 (read-nums (slurp "day-5.txt")) [1])
+             :out
+             butlast
+             (every? zero?)))
+    (is (= 16574641 (-> (day-5 (read-nums (slurp "day-5.txt")) [1])
+                        :out
+                        last))))
+  (testing "part two"
+    (testing "input equals 8"
+      (is (= 1 (first (:out (day-5 (read-nums "3,9,8,9,10,9,4,9,99,-1,8") [8])))))
+      (is (= 0 (first (:out (day-5 (read-nums "3,9,8,9,10,9,4,9,99,-1,8") [7])))))
+      (is (= 1 (first (:out (day-5 (read-nums "3,3,1108,-1,8,3,4,3,99") [8])))))
+      (is (= 0 (first (:out (day-5 (read-nums "3,3,1108,-1,8,3,4,3,99") [7]))))))
+    (testing "input is less than 8"
+      (is (= 1 (first (:out (day-5 (read-nums "3,9,7,9,10,9,4,9,99,-1,8") [7])))))
+      (is (= 0 (first (:out (day-5 (read-nums "3,9,7,9,10,9,4,9,99,-1,8") [8])))))
+      (is (= 1 (first (:out (day-5 (read-nums "3,3,1107,-1,8,3,4,3,99") [7])))))
+      (is (= 0 (first (:out (day-5 (read-nums "3,3,1107,-1,8,3,4,3,99") [8]))))))
+    (testing "jump-tests; test if input is non-zero"
+      (is (= 1 (first (:out (day-5 (read-nums "3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9") [8])))))
+      (is (= 0 (first (:out (day-5 (read-nums "3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9") [0])))))
+      (is (= 1 (first (:out (day-5 (read-nums "3,3,1105,-1,9,1101,0,0,12,4,12,99,1") [8])))))
+      (is (= 0 (first (:out (day-5 (read-nums "3,3,1105,-1,9,1101,0,0,12,4,12,99,1") [0]))))))
+    (testing "larger example that is a funny comparator for the number 8"
+      (let [program (read-nums "3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,31,
+1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,
+999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99")]
+        (is (= 999 (first (:out (day-5 program [7])))))
+        (is (= 1000 (first (:out (day-5 program [8])))))
+        (is (= 1001 (first (:out (day-5 program [9])))))))
+    (is (= 15163975 (first (:out (day-5 (read-nums (slurp "day-5.txt")) [5])))))))
