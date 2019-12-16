@@ -3,7 +3,8 @@
             [clojure.edn :as edn]
             [clojure.test :refer [deftest is run-tests testing]]
             [clojure.set :as set]
-            [clojure.tools.trace :refer [deftrace]]))
+            [clojure.tools.trace :refer [deftrace]]
+            [clojure.math.combinatorics :as combo]))
 
 (defn fuel
   [mass]
@@ -426,3 +427,37 @@ K)L
 K)YOU
 I)SAN")))
   (is (= 301 (day-6-2 (slurp "day-6.txt")))))
+
+(defn intcode-comp
+  [program & inputs]
+  (-> (day-5 program inputs)
+      :out
+      first))
+
+(defn amp-circuit
+  [program phases input]
+  (if (empty? phases)
+    input
+    (let [[phase & remaining-phases] phases
+          output (intcode-comp program phase input)]
+      (recur program remaining-phases output))))
+
+(defn day-7
+  [input]
+  (->> (range 5)
+       combo/permutations
+       (mapv (fn [phases]
+               {:phases phases
+                :output (amp-circuit input phases 0)}))
+       (reduce #(max-key :output %1 %2))))
+
+(deftest day-7-test
+  (is (= {:phases [4 3 2 1 0]
+          :output 43210} (day-7 (read-syms "3,15,3,16,1002,16,10,16,1,16,15,15,4,15,99,0,0"))))
+  (is (= {:phases [0 1 2 3 4]
+          :output 54321} (day-7 (read-syms "3,23,3,24,1002,24,10,24,1002,23,-1,23,
+101,5,23,23,1,24,23,23,4,23,99,0,0"))))
+  (is (= {:phases [1 0 4 3 2]
+          :output 65210} (day-7 (read-syms "3,31,3,32,1002,32,10,32,1001,31,-2,31,1007,31,0,33,
+1002,33,7,33,1,33,31,31,1,32,31,31,4,31,99,0,0,0"))))
+  (is (= 17406 (:output (day-7 (read-syms (slurp "day-7.txt")))))))
