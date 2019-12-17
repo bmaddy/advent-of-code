@@ -457,18 +457,17 @@ I)SAN")))
   (is (= 17406 (:output (day-7 (read-syms (slurp "day-7.txt")))))))
 
 (defn make-env
-  ([program in out] (make-env (gensym) program in out))
-  ([id program in out]
+  ([program] (make-env (gensym) program))
+  ([id program]
    {:id id
     :pos 0
     :data program
-    :in in
-    :out out
-    :done (chan)}))
+    :in (chan)
+    :out (chan)}))
 
 (defn eval-expr-ch
   [{:keys [id pos data in out done] :as env} {:keys [op arity raw-args loaded-args] :as expr}]
-  (clojure.pprint/pprint {:env (dissoc env :in :out :done)
+  (clojure.pprint/pprint {:env (dissoc env :in :out)
                           :expr expr})
   (go
     (println :a-start)
@@ -511,83 +510,95 @@ I)SAN")))
                             dest (last raw-args)]
                         {:data (assoc data dest (if (= a b) 1 0))})
                     ;; quit
-                    99 (do (println "stopping " id)
-                           (a/close! done)
-                           (println "closed " id)
-                           {})
+                    99 (do #_(println "stopping " id)
+                           (a/close! in)
+                           (a/close! out)
+                           #_(println "closed " id)
+                           {:pos pos
+                            :done true})
                     (throw (Exception. (str "Unrecognized op for expression: " expr))))
           result (merge env {:pos next-pos} updates)]
       (println :a-end)
       result)))
 
-(defn run-computer
-  [env]
-  (go-loop [env env]
-    (println :b-start env)
-    (let [expr (read-expr env)
-          _ (println expr)
-          eval-ch (eval-expr-ch env expr)
-          _ (println eval-ch)
-          updated (<! eval-ch)]
-      (println :b-end)
-      (recur updated))))
+(defn make-computer
+  [program]
+  (let [{:keys [in out] :as env} (make-env program)
+        done-ch (chan)]
+    (go-loop [env env]
+      (println :b-start env)
+      (if (:done env)
+        (do (>! done-ch env)
+            (a/close! done-ch))
+        (let [expr (read-expr env)
+              _ (println expr)
+              eval-ch (eval-expr-ch env expr)
+              _ (println eval-ch)
+              updated (<! eval-ch)]
+          (println :b-end)
+          (recur updated))))
+    [in out done-ch]))
 
-(defn run
+(defn run-feedback-loop
   [program phases]
-  (let [[a-in a->b b->c c->d d->e e-out] (repeatedly chan)
+  (let [;;[a-in a->b b->c c->d d->e e-out] (repeatedly chan)
+        [inputs outputs done-chs] (apply mapv vector (repeat 5 #(make-computer program)))
         ;; latest-from-e (chan (a/sliding-buffer 1))
+        a-in (first inputs)
+        e-out (last outputs)
         latest-from-e (atom nil)
-        a (make-env program a-in a->b)
-        b (make-env program a->b b->c)
-        c (make-env program b->c c->d)
-        d (make-env program c->d d->e)
-        e (make-env program d->e e-out)
-        computers [a b c d e]]
+        ;; a (run-computer program a-in a->b)
+        ;; b (run-computer program a->b b->c)
+        ;; c (run-computer program b->c c->d)
+        ;; d (run-computer program c->d d->e)
+        ;; e (run-computer program d->e e-out)
+        #_#_computers [a b c d e]]
+    ;; connect outputs to inputs (except for the last output and first input)
+    (mapv #(a/pipe %1 %2) outputs (rest inputs))
     ;; remember latest output from e and pass along to a
     (go
       (println :c-start)
       (while true
-          (let [value (<! e-out)]
-            (reset! latest-from-e value)
-            (>! a-in value)))
+        (let [value (<! e-out)]
+          (reset! latest-from-e value)
+          (>! a-in value)))
       (println :c-end))
     ;; set phases as initial inputs
-    (mapv (fn [computer phase]
-            (>!! (:in computer) phase))
-          computers phases)
+    (mapv #(>!! %1 %2) inputs phases)
     ;; start each computer
-    (doseq [computer computers]
+    #_(doseq [computer computers]
       (run-computer computer))
     ;; start processing by supplying the first input to a
     (>!! a-in 0)
     ;; wait until any computer stops before returning the last result from e
-    (a/alts!! (mapv :done computers))
+    (a/alts!! done-chs)
     @latest-from-e))
 
-(defn helper
-  [s inputs]
-  (let [in (chan)
-        out (chan)
-        a (make-env :a (read-syms s) in out)]
-    (a/onto-chan in inputs)
-    (run-computer a)
-    (<!! out)))
-#_(helper "3,0,4,0,99" [1234])
+(defn run-computer
+  ([s] (run-computer s []))
+  ([s inputs]
+   (let [[in out done] (make-computer (if (string? s) (read-syms s) s))]
+     (a/onto-chan in inputs)
+     (let [[v ch] (a/alts!! [out done])]
+       (if (= done ch)
+         v
+         (assoc (<!! done) :out v))))))
+#_(run-computer "3,0,4,0,99" [1234])
 
 (deftest day-7-2-test
   (testing "day-2 tests"
-    (is (= [2,0,0,0,99] (:data (day-5 (read-syms "1,0,0,0,99")))))
-    (is (= [2,3,0,6,99] (:data (day-5 (read-syms "2,3,0,3,99")))))
-    (is (= [2,4,4,5,99,9801] (:data (day-5 (read-syms "2,4,4,5,99,0")))))
-    (is (= [30,1,1,4,2,5,6,0,99] (:data (day-5 (read-syms "1,1,1,4,99,5,6,0,99")))))
+    (is (= [2,0,0,0,99] (:data (run-computer "1,0,0,0,99"))))
+    (is (= [2,3,0,6,99] (:data (run-computer "2,3,0,3,99"))))
+    (is (= [2,4,4,5,99,9801] (:data (run-computer "2,4,4,5,99,0"))))
+    (is (= [30,1,1,4,2,5,6,0,99] (:data (run-computer "1,1,1,4,99,5,6,0,99"))))
     (is (= 3085697 (-> (slurp "day-2.txt")
                        read-syms
                        (assoc 1 12)
                        (assoc 2 2)
-                       day-5
+                       run-computer
                        :data
                        first))))
-  (testing "day-5 tests"
+  #_(testing "day-5 tests"
     (testing "part one"
       (is (= [1234] (:out (day-5 (read-syms "3,0,4,0,99") [1234]))))
       (is (= [2 0 1 0] (take 4 (read-instruction 1002))))
