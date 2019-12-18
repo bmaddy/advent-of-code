@@ -466,11 +466,8 @@ I)SAN")))
     :out (chan)}))
 
 (defn eval-expr-ch
-  [{:keys [id pos data in out done] :as env} {:keys [op arity raw-args loaded-args] :as expr}]
-  (clojure.pprint/pprint {:env (dissoc env :in :out)
-                          :expr expr})
+  [{:keys [id pos data in out] :as env} {:keys [op arity raw-args loaded-args] :as expr}]
   (go
-    (println :a-start)
     (let [next-pos (+ pos (inc arity))
           updates (case op
                     ;; add
@@ -483,15 +480,14 @@ I)SAN")))
                         {:data (assoc data dest (* a b))})
                     ;; read
                     3 (let [[dest] raw-args
-                            _ (println '(<! in))
+                            _ (println (str id " reading from in..."))
                             input (<! in)]
                         (println (str input " -> " id))
                         {:data (assoc data dest input)})
                     ;; write
                     4 (let [[value] loaded-args]
-                        (println `(>! out ~value))
-                        (>! out value)
                         (println (str id " -> " value))
+                        (>! out value)
                         {})
                     ;; jump-if-true
                     5 (let [[test jump-pos] loaded-args]
@@ -510,64 +506,40 @@ I)SAN")))
                             dest (last raw-args)]
                         {:data (assoc data dest (if (= a b) 1 0))})
                     ;; quit
-                    99 (do #_(println "stopping " id)
-                           (a/close! in)
+                    99 (do (a/close! in)
                            (a/close! out)
-                           #_(println "closed " id)
                            {:pos pos
                             :done true})
-                    (throw (Exception. (str "Unrecognized op for expression: " expr))))
-          result (merge env {:pos next-pos} updates)]
-      (println :a-end)
-      result)))
+                    (throw (Exception. (str "Unrecognized op for expression: " expr))))]
+      (merge env {:pos next-pos} updates))))
 
 (defn make-computer
   [program]
   (let [{:keys [in out] :as env} (make-env program)
         done-ch (chan)]
     (go-loop [env env]
-      (println :b-start env)
       (if (:done env)
         (do (>! done-ch env)
             (a/close! done-ch))
-        (let [expr (read-expr env)
-              _ (println expr)
-              eval-ch (eval-expr-ch env expr)
-              _ (println eval-ch)
-              updated (<! eval-ch)]
-          (println :b-end)
-          (recur updated))))
+        (recur (<! (eval-expr-ch env (read-expr env))))))
     [in out done-ch]))
 
 (defn run-feedback-loop
   [program phases]
-  (let [;;[a-in a->b b->c c->d d->e e-out] (repeatedly chan)
-        [inputs outputs done-chs] (apply mapv vector (repeat 5 #(make-computer program)))
-        ;; latest-from-e (chan (a/sliding-buffer 1))
+  (let [[inputs outputs done-chs] (apply mapv vector (repeat 5 #(make-computer program)))
         a-in (first inputs)
         e-out (last outputs)
-        latest-from-e (atom nil)
-        ;; a (run-computer program a-in a->b)
-        ;; b (run-computer program a->b b->c)
-        ;; c (run-computer program b->c c->d)
-        ;; d (run-computer program c->d d->e)
-        ;; e (run-computer program d->e e-out)
-        #_#_computers [a b c d e]]
+        latest-from-e (atom nil)]
     ;; connect outputs to inputs (except for the last output and first input)
     (mapv #(a/pipe %1 %2) outputs (rest inputs))
     ;; remember latest output from e and pass along to a
     (go
-      (println :c-start)
       (while true
         (let [value (<! e-out)]
           (reset! latest-from-e value)
-          (>! a-in value)))
-      (println :c-end))
+          (>! a-in value))))
     ;; set phases as initial inputs
     (mapv #(>!! %1 %2) inputs phases)
-    ;; start each computer
-    #_(doseq [computer computers]
-      (run-computer computer))
     ;; start processing by supplying the first input to a
     (>!! a-in 0)
     ;; wait until any computer stops before returning the last result from e
@@ -577,12 +549,14 @@ I)SAN")))
 (defn run-computer
   ([s] (run-computer s []))
   ([s inputs]
-   (let [[in out done] (make-computer (if (string? s) (read-syms s) s))]
-     (a/onto-chan in inputs)
-     (let [[v ch] (a/alts!! [out done])]
+   (let [[in-ch out-ch done-ch] (make-computer (if (string? s) (read-syms s) s))]
+     (a/onto-chan in-ch inputs)
+     #_(let [[v ch] (a/alts!! [out done])]
        (if (= done ch)
          v
-         (assoc (<!! done) :out v))))))
+         (assoc (<!! done) :out v)))
+     (let [out (<!! (a/into [] out-ch))]
+       (assoc (<!! done-ch) :out out)))))
 #_(run-computer "3,0,4,0,99" [1234])
 
 (deftest day-7-2-test
@@ -598,41 +572,41 @@ I)SAN")))
                        run-computer
                        :data
                        first))))
-  #_(testing "day-5 tests"
+  (testing "day-5 tests"
     (testing "part one"
-      (is (= [1234] (:out (day-5 (read-syms "3,0,4,0,99") [1234]))))
+      (is (= [1234] (:out (run-computer "3,0,4,0,99" [1234]))))
       (is (= [2 0 1 0] (take 4 (read-instruction 1002))))
-      (is (= [1002 4 3 4 99] (:data (day-5 (read-syms "1002,4,3,4,33")))))
-      (is (= [11002 4 3 4 99] (:data (day-5 (read-syms "11002,4,3,4,33")))))
-      (is (= [1101 100 -1 4 99] (:data (day-5 (read-syms "1101,100,-1,4,0")))))
-      (is (->> (day-5 (read-syms (slurp "day-5.txt")) [1])
+      (is (= [1002 4 3 4 99] (:data (run-computer "1002,4,3,4,33"))))
+      (is (= [11002 4 3 4 99] (:data (run-computer "11002,4,3,4,33"))))
+      (is (= [1101 100 -1 4 99] (:data (run-computer "1101,100,-1,4,0"))))
+      (is (->> (run-computer (slurp "day-5.txt") [1])
                :out
                butlast
                (every? zero?)))
-      (is (= 16574641 (-> (day-5 (read-syms (slurp "day-5.txt")) [1])
+      (is (= 16574641 (-> (run-computer (slurp "day-5.txt") [1])
                           :out
                           last))))
     (testing "part two"
       (testing "input equals 8"
-        (is (= 1 (first (:out (day-5 (read-syms "3,9,8,9,10,9,4,9,99,-1,8") [8])))))
-        (is (= 0 (first (:out (day-5 (read-syms "3,9,8,9,10,9,4,9,99,-1,8") [7])))))
-        (is (= 1 (first (:out (day-5 (read-syms "3,3,1108,-1,8,3,4,3,99") [8])))))
-        (is (= 0 (first (:out (day-5 (read-syms "3,3,1108,-1,8,3,4,3,99") [7]))))))
+        (is (= 1 (first (:out (run-computer "3,9,8,9,10,9,4,9,99,-1,8" [8])))))
+        (is (= 0 (first (:out (run-computer "3,9,8,9,10,9,4,9,99,-1,8" [7])))))
+        (is (= 1 (first (:out (run-computer "3,3,1108,-1,8,3,4,3,99" [8])))))
+        (is (= 0 (first (:out (run-computer "3,3,1108,-1,8,3,4,3,99" [7]))))))
       (testing "input is less than 8"
-        (is (= 1 (first (:out (day-5 (read-syms "3,9,7,9,10,9,4,9,99,-1,8") [7])))))
-        (is (= 0 (first (:out (day-5 (read-syms "3,9,7,9,10,9,4,9,99,-1,8") [8])))))
-        (is (= 1 (first (:out (day-5 (read-syms "3,3,1107,-1,8,3,4,3,99") [7])))))
-        (is (= 0 (first (:out (day-5 (read-syms "3,3,1107,-1,8,3,4,3,99") [8]))))))
+        (is (= 1 (first (:out (run-computer "3,9,7,9,10,9,4,9,99,-1,8" [7])))))
+        (is (= 0 (first (:out (run-computer "3,9,7,9,10,9,4,9,99,-1,8" [8])))))
+        (is (= 1 (first (:out (run-computer "3,3,1107,-1,8,3,4,3,99" [7])))))
+        (is (= 0 (first (:out (run-computer "3,3,1107,-1,8,3,4,3,99" [8]))))))
       (testing "jump-tests; test if input is non-zero"
-        (is (= 1 (first (:out (day-5 (read-syms "3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9") [8])))))
-        (is (= 0 (first (:out (day-5 (read-syms "3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9") [0])))))
-        (is (= 1 (first (:out (day-5 (read-syms "3,3,1105,-1,9,1101,0,0,12,4,12,99,1") [8])))))
-        (is (= 0 (first (:out (day-5 (read-syms "3,3,1105,-1,9,1101,0,0,12,4,12,99,1") [0]))))))
+        (is (= 1 (first (:out (run-computer "3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9" [8])))))
+        (is (= 0 (first (:out (run-computer "3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9" [0])))))
+        (is (= 1 (first (:out (run-computer "3,3,1105,-1,9,1101,0,0,12,4,12,99,1" [8])))))
+        (is (= 0 (first (:out (run-computer "3,3,1105,-1,9,1101,0,0,12,4,12,99,1" [0]))))))
       (testing "larger example that is a funny comparator for the number 8"
-        (let [program (read-syms "3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,31,
+        (let [program "3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,31,
 1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,
-999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99")]
-          (is (= 999 (first (:out (day-5 program [7])))))
-          (is (= 1000 (first (:out (day-5 program [8])))))
-          (is (= 1001 (first (:out (day-5 program [9])))))))
-      (is (= 15163975 (first (:out (day-5 (read-syms (slurp "day-5.txt")) [5]))))))))
+999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99"]
+          (is (= 999 (first (:out (run-computer program [7])))))
+          (is (= 1000 (first (:out (run-computer program [8])))))
+          (is (= 1001 (first (:out (run-computer program [9])))))))
+      (is (= 15163975 (first (:out (run-computer (slurp "day-5.txt") [5]))))))))
