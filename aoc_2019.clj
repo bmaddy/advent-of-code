@@ -457,18 +457,22 @@ I)SAN")))
   (is (= 17406 (:output (day-7 (read-syms (slurp "day-7.txt")))))))
 
 (defn make-env
-  ([program] (make-env (gensym) program))
-  ([id program]
-   {:id id
-    :pos 0
-    :data program
-    :in (chan)
-    :out (chan)}))
+  [id program]
+  {:id id
+   :pos 0
+   :data program
+   :in (chan)
+   :out (chan)})
 
 (defn eval-expr-ch
   [{:keys [id pos data in out] :as env} {:keys [op arity raw-args loaded-args] :as expr}]
   (go
     (let [next-pos (+ pos (inc arity))
+          quit (fn []
+                 (a/close! in)
+                 (a/close! out)
+                 {:pos pos
+                  :done true})
           updates (case op
                     ;; add
                     1 (let [[a b] loaded-args
@@ -480,13 +484,15 @@ I)SAN")))
                         {:data (assoc data dest (* a b))})
                     ;; read
                     3 (let [[dest] raw-args
-                            _ (println (str id " reading from in..."))
+                            ;; _ (println (str id " reading from in..."))
                             input (<! in)]
-                        (println (str input " -> " id))
-                        {:data (assoc data dest input)})
+                        ;; (println (str input " -> " id))
+                        (if (nil? input)
+                          (quit)
+                          {:data (assoc data dest input)}))
                     ;; write
                     4 (let [[value] loaded-args]
-                        (println (str id " -> " value))
+                        ;; (println (str id " -> " value))
                         (>! out value)
                         {})
                     ;; jump-if-true
@@ -506,58 +512,66 @@ I)SAN")))
                             dest (last raw-args)]
                         {:data (assoc data dest (if (= a b) 1 0))})
                     ;; quit
-                    99 (do (a/close! in)
-                           (a/close! out)
-                           {:pos pos
-                            :done true})
+                    99 (quit)
                     (throw (Exception. (str "Unrecognized op for expression: " expr))))]
       (merge env {:pos next-pos} updates))))
 
 (defn make-computer
-  [program]
-  (let [{:keys [in out] :as env} (make-env program)
-        done-ch (chan)]
-    (go-loop [env env]
-      (if (:done env)
-        (do (>! done-ch env)
-            (a/close! done-ch))
-        (recur (<! (eval-expr-ch env (read-expr env))))))
-    [in out done-ch]))
+  ([program] (make-computer (gensym) program))
+  ([id program]
+   (let [{:keys [in out] :as env} (make-env id program)
+         done-ch (chan)]
+     (go-loop [env env]
+       (if (:done env)
+         (do (>! done-ch env)
+             (a/close! done-ch))
+         (recur (<! (eval-expr-ch env (read-expr env))))))
+     [in out done-ch])))
 
 (defn run-feedback-loop
   [program phases]
-  (let [[inputs outputs done-chs] (apply mapv vector (repeat 5 #(make-computer program)))
+  (let [[inputs outputs done-chs] (->> [:a :b :c :d :e]
+                                       (mapv #(make-computer % program))
+                                       (apply mapv vector))
         a-in (first inputs)
         e-out (last outputs)
-        latest-from-e (atom nil)]
+        all-from-e (chan (a/sliding-buffer 1))]
     ;; connect outputs to inputs (except for the last output and first input)
     (mapv #(a/pipe %1 %2) outputs (rest inputs))
     ;; remember latest output from e and pass along to a
-    (go
-      (while true
-        (let [value (<! e-out)]
-          (reset! latest-from-e value)
-          (>! a-in value))))
+    (go-loop []
+      (if-let [value (<! e-out)]
+        (do
+          (>! all-from-e value)
+          (>! a-in value)
+          (recur))
+        (do
+          (a/close! all-from-e)
+          (a/close! a-in))))
     ;; set phases as initial inputs
     (mapv #(>!! %1 %2) inputs phases)
     ;; start processing by supplying the first input to a
     (>!! a-in 0)
     ;; wait until any computer stops before returning the last result from e
     (a/alts!! done-chs)
-    @latest-from-e))
+    (last (<!! (a/into [] all-from-e)))))
 
 (defn run-computer
   ([s] (run-computer s []))
   ([s inputs]
    (let [[in-ch out-ch done-ch] (make-computer (if (string? s) (read-syms s) s))]
      (a/onto-chan in-ch inputs)
-     #_(let [[v ch] (a/alts!! [out done])]
-       (if (= done ch)
-         v
-         (assoc (<!! done) :out v)))
      (let [out (<!! (a/into [] out-ch))]
        (assoc (<!! done-ch) :out out)))))
-#_(run-computer "3,0,4,0,99" [1234])
+
+(defn day-7-2
+  [input]
+  (->> (range 5 10)
+       combo/permutations
+       (mapv (fn [phases]
+               {:phases phases
+                :output (run-feedback-loop (read-syms input) phases)}))
+       (reduce #(max-key :output %1 %2))))
 
 (deftest day-7-2-test
   (testing "day-2 tests"
@@ -572,6 +586,7 @@ I)SAN")))
                        run-computer
                        :data
                        first))))
+
   (testing "day-5 tests"
     (testing "part one"
       (is (= [1234] (:out (run-computer "3,0,4,0,99" [1234]))))
@@ -609,4 +624,24 @@ I)SAN")))
           (is (= 999 (first (:out (run-computer program [7])))))
           (is (= 1000 (first (:out (run-computer program [8])))))
           (is (= 1001 (first (:out (run-computer program [9])))))))
-      (is (= 15163975 (first (:out (run-computer (slurp "day-5.txt") [5]))))))))
+      (is (= 15163975 (first (:out (run-computer (slurp "day-5.txt") [5])))))))
+
+  (testing "day-7-2 tests"
+    (is (= 139629729
+           (run-feedback-loop (read-syms "3,26,1001,26,-4,26,3,27,1002,27,2,27,1,27,26,
+27,4,27,1001,28,-1,28,1005,28,6,99,0,0,5")
+                              [9,8,7,6,5])))
+    (is (= {:phases [9,8,7,6,5] :output 139629729}
+           (day-7-2 "3,26,1001,26,-4,26,3,27,1002,27,2,27,1,27,26,
+27,4,27,1001,28,-1,28,1005,28,6,99,0,0,5")))
+    (is (= 18216
+           (run-feedback-loop (read-syms "3,52,1001,52,-5,52,3,53,1,52,56,54,1007,54,5,55,1005,55,26,1001,54,
+-5,54,1105,1,12,1,53,54,53,1008,54,0,55,1001,55,1,55,2,53,55,53,4,
+53,1001,56,-1,56,1005,56,6,99,0,0,0,0,10")
+                              [9,7,8,5,6])))
+    (is (= {:phases [9,7,8,5,6] :output 18216}
+           (day-7-2 "3,52,1001,52,-5,52,3,53,1,52,56,54,1007,54,5,55,1005,55,26,1001,54,
+-5,54,1105,1,12,1,53,54,53,1008,54,0,55,1001,55,1,55,2,53,55,53,4,
+53,1001,56,-1,56,1005,56,6,99,0,0,0,0,10")))
+    (is (= {:phases [7 8 6 9 5], :output 1047153}
+           (day-7-2 (slurp "day-7.txt"))))))
