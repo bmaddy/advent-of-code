@@ -645,3 +645,41 @@ I)SAN")))
 53,1001,56,-1,56,1005,56,6,99,0,0,0,0,10")))
     (is (= {:phases [7 8 6 9 5], :output 1047153}
            (day-7-2 (slurp "day-7.txt"))))))
+
+(defn day-8
+  [input w h]
+  (let [counts (->> input
+                   (partition (* w h))
+                   (mapv frequencies)
+                   (apply min-key #(get % \0 0)))]
+    (* (get counts \1 0)
+       (get counts \2 0))))
+
+(deftest day-8-test
+  (is (= 1 (day-8 "123456789012" 3 2)))
+  (is (= 1560 (day-8 (slurp "day-8.txt") 25 6))))
+
+(defn day-8-2
+  [input w h]
+  (->> input
+       (partition (* w h))
+       (reduce (fn [a b]
+                 (mapv (fn [x y]
+                         (if (= x \2) y x))
+                       a b)))
+       (mapv {\1 \X
+              \0 \space
+              \2 \space})
+       (partition w)
+       (mapv str/join)
+       (str/join \newline)))
+
+(deftest day-8-2-test
+  (is (= " X\nX " (day-8-2 "0222112222120000" 2 2)))
+  (is (= ["X  X  XX   XX  X  X X  X "
+          "X  X X  X X  X X  X X  X "
+          "X  X X    X    X  X XXXX "
+          "X  X X XX X    X  X X  X "
+          "X  X X  X X  X X  X X  X "
+          " XX   XXX  XX   XX  X  X "]
+         (str/split (day-8-2 (slurp "day-8.txt") 25 6) #"\n"))))
