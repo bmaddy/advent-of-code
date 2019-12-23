@@ -25,7 +25,7 @@
        (map first)))
 
 (defn read-expr
-  [{:keys [pos data relative-base] :as env}]
+  [{:keys [pos data] :as env}]
   (let [op->arity {1 3
                    2 3
                    3 1
@@ -40,34 +40,14 @@
         arity (op->arity op)
         _ (when (nil? arity)
             (throw (Exception. (str "Arity not found for op " op))))
-        arg-loaders (->> param-modes
-                         (map {;; position mode
-                               0 #(get data % 0)
-                               ;; immediate mode
-                               1 identity
-                               ;; relative mode
-                               2 #(get data (+ relative-base %) 0)})
-                         (take arity))
         raw-args (->> (range)
                       (drop (inc pos))
                       (take arity)
-                      (mapv #(get data %)))
-        ;; args-as-positions (mapv #(case %
-        ;;                            0 %
-        ;;                            1 nil
-        ;;                            2 (+ relative-base %))
-        ;;                         raw-args)
-        ;; args-as-values (mapv #(case %
-        ;;                         0 (get data % 0)
-        ;;                         1 %
-        ;;                         2 (get data % 0))
-        ;;                      args-as-positions)
-        loaded-args (map #(%1 %2) arg-loaders raw-args)]
+                      (mapv #(get data %)))]
     {:op op
      :arity arity
      :raw-args raw-args
-     :param-modes (take arity param-modes)
-     :loaded-args loaded-args}))
+     :param-modes (take arity param-modes)}))
 
 (defn get-param-address
   [{:keys [relative-base]} param-mode value]
