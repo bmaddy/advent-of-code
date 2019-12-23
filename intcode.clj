@@ -3,13 +3,13 @@
 
 (defn read-syms
   [s]
-  (edn/read-string (str "[" s "]"))
-  #_(reduce-kv assoc {} (edn/read-string (str "[" s "]"))))
+  (edn/read-string (str "[" s "]")))
 
 (defn make-env
   [program input]
   {:pos 0
-   :data program
+   ;; converting to sorted-map to allow access to memory locations outside the original size
+   :data (reduce-kv assoc (sorted-map) program)
    :relative-base 0
    :in (into (clojure.lang.PersistentQueue/EMPTY) input)
    :out (clojure.lang.PersistentQueue/EMPTY)})
@@ -26,8 +26,7 @@
 
 (defn read-expr
   [{:keys [pos data relative-base] :as env}]
-  (let [[op & param-modes] (read-instruction (get data pos))
-        op->arity {1 3
+  (let [op->arity {1 3
                    2 3
                    3 1
                    4 1
@@ -37,66 +36,94 @@
                    8 3
                    9 1
                    99 0}
+        [op & param-modes] (read-instruction (get data pos))
         arity (op->arity op)
         _ (when (nil? arity)
             (throw (Exception. (str "Arity not found for op " op))))
         arg-loaders (->> param-modes
                          (map {;; position mode
-                               0 #(get data %)
+                               0 #(get data % 0)
                                ;; immediate mode
                                1 identity
                                ;; relative mode
-                               2 #(get data (+ relative-base %))})
+                               2 #(get data (+ relative-base %) 0)})
                          (take arity))
-        raw-args (->> data
-                      ;; using inc to also skip the instruction
+        raw-args (->> (range)
                       (drop (inc pos))
-                      (take arity))
+                      (take arity)
+                      (mapv #(get data %)))
+        ;; args-as-positions (mapv #(case %
+        ;;                            0 %
+        ;;                            1 nil
+        ;;                            2 (+ relative-base %))
+        ;;                         raw-args)
+        ;; args-as-values (mapv #(case %
+        ;;                         0 (get data % 0)
+        ;;                         1 %
+        ;;                         2 (get data % 0))
+        ;;                      args-as-positions)
         loaded-args (map #(%1 %2) arg-loaders raw-args)]
     {:op op
      :arity arity
      :raw-args raw-args
+     :param-modes (take arity param-modes)
      :loaded-args loaded-args}))
+
+(defn get-param-address
+  [{:keys [relative-base]} param-mode value]
+  (case param-mode
+    0 value
+    1 value
+    2 (+ relative-base value)))
+
+(defn get-param-value
+  [{:keys [data] :as env} param-mode value]
+  (if (= 1 param-mode)
+    value
+    (get data (get-param-address env param-mode value) 0)))
 
 (defn eval-expr
   [{:keys [pos data relative-base in out] :as env}
-   {:keys [op arity raw-args loaded-args] :as expr}]
+   {:keys [op arity raw-args param-modes] :as expr}]
+  ;; (prn `(eval-expr ~env ~expr))
   (let [next-pos (+ pos (inc arity))
+        param-values (mapv #(get-param-value env %1 %2) param-modes raw-args)
+        param-addresses (mapv #(get-param-address env %1 %2) param-modes raw-args)
         updates (case op
                   ;; add
-                  1 (let [[a b] loaded-args
-                          dest (last raw-args)]
+                  1 (let [[a b] param-values
+                          dest (last param-addresses)]
                       {:data (assoc data dest (+ a b))})
                   ;; mult
-                  2 (let [[a b] loaded-args
-                          dest (last raw-args)]
+                  2 (let [[a b] param-values
+                          dest (last param-addresses)]
                       {:data (assoc data dest (* a b))})
                   ;; read
-                  3 (let [[dest] raw-args]
+                  3 (let [[dest] param-addresses]
                       (assert (not-empty in) "Tried to read from empty input.")
                       {:data (assoc data dest (peek in))
                        :in (pop in)})
                   ;; write
-                  4 (let [[value] loaded-args]
+                  4 (let [[value] param-values]
                       {:out (conj out value)})
                   ;; jump-if-true
-                  5 (let [[test jump-pos] loaded-args]
+                  5 (let [[test jump-pos] param-values]
                       (when-not (zero? test)
                         {:pos jump-pos}))
                   ;; jump-if-else
-                  6 (let [[test jump-pos] loaded-args]
+                  6 (let [[test jump-pos] param-values]
                       (when (zero? test)
                         {:pos jump-pos}))
                   ;; less than
-                  7 (let [[a b] loaded-args
-                          dest (last raw-args)]
+                  7 (let [[a b] param-values
+                          dest (last param-addresses)]
                       {:data (assoc data dest (if (< a b) 1 0))})
                   ;; equal
-                  8 (let [[a b] loaded-args
-                          dest (last raw-args)]
+                  8 (let [[a b] param-values
+                          dest (last param-addresses)]
                       {:data (assoc data dest (if (= a b) 1 0))})
                   ;; adjust relative-base
-                  9 (let [[value] loaded-args]
+                  9 (let [[value] param-values]
                       {:relative-base (+ relative-base value)})
                   ;; quit
                   99 {:done true}
