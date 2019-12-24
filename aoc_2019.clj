@@ -684,24 +684,6 @@ I)SAN")))
           " XX   XXX  XX   XX  X  X "]
          (str/split (day-8-2 (slurp "day-8.txt") 25 6) #"\n"))))
 
-(defn euclidean-gcd
-  [a b]
-  (if (zero? b)
-    a
-    (recur b (mod a b))))
-
-(defn reduced-vector
-  [[src-x src-y] [dest-x dest-y]]
-  (let [dx (- dest-x src-x)
-        dy (- dest-y src-y)
-        ;; Euclidean algorithm requires nonnegative inputs
-        gcd (euclidean-gcd (Math/abs dx) (Math/abs dy))]
-    [(/ dx gcd) (/ dy gcd)]))
-
-(defn visible-asteroids
-  [src coll]
-  (set (mapv #(reduced-vector src %) (disj coll src))))
-
 (defn read-locations
   [input]
   (set
@@ -710,12 +692,37 @@ I)SAN")))
          :when (= \# item)]
      [x y])))
 
+(defn build-edges
+  [asteroids]
+  (reduce into
+          (for [[src-x src-y :as src] asteroids
+                [dest-x dest-y :as dest] (disj asteroids src)
+                :let [dx (- dest-x src-x)
+                      dy (- dest-y src-y)
+                      gcd (.gcd (biginteger dx) (biginteger dy))
+                      reduced-x (/ dx gcd)
+                      reduced-y (/ dy gcd)]]
+            [{:src src
+              :dest dest
+              :relative-loc [dx dy]
+              :direction [reduced-x reduced-y]}
+             {:src dest
+              :dest src
+              :relative-loc [(- dx) (- dy)]
+              :direction [(- reduced-x) (- reduced-y)]}])))
+
+(defn visible-asteroids
+  [input]
+  (->> input
+       read-locations
+       build-edges
+       (group-by (juxt :src :direction))
+       (map ffirst)
+       frequencies))
+
 (defn day-10
   [input]
-  (let [asteroids (read-locations input)]
-    (apply max
-           (mapv #(count (visible-asteroids % asteroids)) asteroids))))
-#_(day-10 (slurp "day-10.txt"))
+  (reduce max (vals (visible-asteroids input))))
 
 (deftest day-10-test
   (let [m ".#..#
@@ -723,16 +730,17 @@ I)SAN")))
 #####
 ....#
 ...##"]
-    (is (= 7 (count (visible-asteroids [1 0] (read-locations m)))))
-    (is (= 7 (count (visible-asteroids [4 0] (read-locations m)))))
-    (is (= 6 (count (visible-asteroids [0 2] (read-locations m)))))
-    (is (= 7 (count (visible-asteroids [1 2] (read-locations m)))))
-    (is (= 7 (count (visible-asteroids [2 2] (read-locations m)))))
-    (is (= 7 (count (visible-asteroids [3 2] (read-locations m)))))
-    (is (= 5 (count (visible-asteroids [4 2] (read-locations m)))))
-    (is (= 7 (count (visible-asteroids [4 3] (read-locations m)))))
-    (is (= 8 (count (visible-asteroids [3 4] (read-locations m)))))
-    (is (= 7 (count (visible-asteroids [4 4] (read-locations m)))))
+    (is (= {[0 2] 6
+            [1 0] 7
+            [1 2] 7
+            [2 2] 7
+            [3 2] 7
+            [3 4] 8
+            [4 0] 7
+            [4 2] 5
+            [4 3] 7
+            [4 4] 7}
+           (visible-asteroids m)))
     (is (= 8 (day-10 m))))
 
   (let [m "......#.#.
@@ -745,7 +753,7 @@ I)SAN")))
 .##.#..###
 ##...#..#.
 .#....####"]
-    (is (= 33 (count (visible-asteroids [5 8] (read-locations m)))))
+    (is (= 33 (get (visible-asteroids m) [5 8])))
     (is (= 33 (day-10 m))))
 
   (let [m "#.#...#.#.
@@ -758,7 +766,7 @@ I)SAN")))
 ..##....##
 ......#...
 .####.###."]
-    (is (= 35 (count (visible-asteroids [1 2] (read-locations m)))))
+    (is (= 35 (get (visible-asteroids m) [1 2])))
     (is (= 35 (day-10 m))))
 
   (let [m ".#..#..###
@@ -771,7 +779,7 @@ I)SAN")))
 #..#.#.###
 .##...##.#
 .....#.#.."]
-    (is (= 41 (count (visible-asteroids [6 3] (read-locations m)))))
+    (is (= 41 (get (visible-asteroids m) [6 3])))
     (is (= 41 (day-10 m))))
   (let [m ".#..##.###...#######
 ##.############..##.
@@ -793,7 +801,7 @@ I)SAN")))
 .#.#.###########.###
 #.#.#.#####.####.###
 ###.##.####.##.#..##"]
-    (is (= 210 (count (visible-asteroids [11 13] (read-locations m)))))
+    (is (= 210 (get (visible-asteroids m) [11 13])))
     (is (= 210 (day-10 m))))
 
   (is (= 278 (day-10 (slurp "day-10.txt")))))
