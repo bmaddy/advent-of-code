@@ -683,3 +683,119 @@ I)SAN")))
           "X  X X  X X  X X  X X  X "
           " XX   XXX  XX   XX  X  X "]
          (str/split (day-8-2 (slurp "day-8.txt") 25 6) #"\n"))))
+
+(defn greatest-common-divisor
+  [a b]
+  (if (zero? b)
+    (Math/abs a)
+    (recur b (mod a b))))
+
+(defn reduced-vector
+  [[src-x src-y] [dest-x dest-y]]
+  (let [dx (- dest-x src-x)
+        dy (- dest-y src-y)
+        gcd (greatest-common-divisor dx dy)]
+    [(/ dx gcd) (/ dy gcd)]))
+
+(defn visible-asteroids
+  [src coll]
+  (set (mapv #(reduced-vector src %) (disj coll src))))
+
+(defn read-locations
+  [input]
+  (set
+   (for [[y row] (map-indexed vector (str/split-lines input))
+         [x item] (map-indexed vector row)
+         :when (= \# item)]
+     [x y])))
+
+(defn day-10
+  [input]
+  (let [asteroids (read-locations input)]
+    (apply max
+           (mapv #(count (visible-asteroids % asteroids)) asteroids))))
+#_(day-10 (slurp "day-10.txt"))
+
+(deftest day-10-test
+  (let [m ".#..#
+.....
+#####
+....#
+...##"]
+    (is (= 7 (count (visible-asteroids [1 0] (read-locations m)))))
+    (is (= 7 (count (visible-asteroids [4 0] (read-locations m)))))
+    (is (= 6 (count (visible-asteroids [0 2] (read-locations m)))))
+    (is (= 7 (count (visible-asteroids [1 2] (read-locations m)))))
+    (is (= 7 (count (visible-asteroids [2 2] (read-locations m)))))
+    (is (= 7 (count (visible-asteroids [3 2] (read-locations m)))))
+    (is (= 5 (count (visible-asteroids [4 2] (read-locations m)))))
+    (is (= 7 (count (visible-asteroids [4 3] (read-locations m)))))
+    (is (= 8 (count (visible-asteroids [3 4] (read-locations m)))))
+    (is (= 7 (count (visible-asteroids [4 4] (read-locations m)))))
+    (is (= 8 (day-10 m))))
+
+  (let [m "......#.#.
+#..#.#....
+..#######.
+.#.#.###..
+.#..#.....
+..#....#.#
+#..#....#.
+.##.#..###
+##...#..#.
+.#....####"]
+    (is (= 33 (count (visible-asteroids [5 8] (read-locations m)))))
+    (is (= 33 (day-10 m))))
+
+  (let [m "#.#...#.#.
+.###....#.
+.#....#...
+##.#.#.#.#
+....#.#.#.
+.##..###.#
+..#...##..
+..##....##
+......#...
+.####.###."]
+    (is (= 35 (count (visible-asteroids [1 2] (read-locations m)))))
+    (is (= 35 (day-10 m))))
+
+  (let [m ".#..#..###
+####.###.#
+....###.#.
+..###.##.#
+##.##.#.#.
+....###..#
+..#.#..#.#
+#..#.#.###
+.##...##.#
+.....#.#.."]
+    (is (= 41 (count (visible-asteroids [6 3] (read-locations m)))))
+    (is (= 41 (day-10 m))))
+  (let [m ".#..##.###...#######
+##.############..##.
+.#.######.########.#
+.###.#######.####.#.
+#####.##.#.##.###.##
+..#####..#.#########
+####################
+#.####....###.#.#.##
+##.#################
+#####.##.###..####..
+..######..##.#######
+####.##.####...##..#
+.#####..#.######.###
+##...#.##########...
+#.##########.#######
+.####.#.###.###.#.##
+....##.##.###..#####
+.#.#.###########.###
+#.#.#.#####.####.###
+###.##.####.##.#..##"]
+    (is (= 210 (count (visible-asteroids [11 13] (read-locations m)))))
+    (is (= 210 (day-10 m))))
+
+  (is (= 278 (day-10 (slurp "day-10.txt")))))
+
+;; calculate slope between each pair
+;; for each asteroid, calculate slopes (as a ratio) to all others, convert to set, count, find the asteroid with the max
