@@ -684,17 +684,18 @@ I)SAN")))
           " XX   XXX  XX   XX  X  X "]
          (str/split (day-8-2 (slurp "day-8.txt") 25 6) #"\n"))))
 
-(defn greatest-common-divisor
+(defn euclidean-gcd
   [a b]
   (if (zero? b)
-    (Math/abs a)
+    a
     (recur b (mod a b))))
 
 (defn reduced-vector
   [[src-x src-y] [dest-x dest-y]]
   (let [dx (- dest-x src-x)
         dy (- dest-y src-y)
-        gcd (greatest-common-divisor dx dy)]
+        ;; Euclidean algorithm requires nonnegative inputs
+        gcd (euclidean-gcd (Math/abs dx) (Math/abs dy))]
     [(/ dx gcd) (/ dy gcd)]))
 
 (defn visible-asteroids
@@ -796,6 +797,3 @@ I)SAN")))
     (is (= 210 (day-10 m))))
 
   (is (= 278 (day-10 (slurp "day-10.txt")))))
-
-;; calculate slope between each pair
-;; for each asteroid, calculate slopes (as a ratio) to all others, convert to set, count, find the asteroid with the max
