@@ -684,38 +684,44 @@ I)SAN")))
           " XX   XXX  XX   XX  X  X "]
          (str/split (day-8-2 (slurp "day-8.txt") 25 6) #"\n"))))
 
-(defn read-locations
-  [input]
+(defn char-locs
+  [chars input]
   (set
    (for [[y row] (map-indexed vector (str/split-lines input))
          [x item] (map-indexed vector row)
-         :when (= \# item)]
+         :when (contains? chars item)]
      [x y])))
 
 (defn build-edges
   [asteroids]
-  (reduce into
-          (for [[src-x src-y :as src] asteroids
-                [dest-x dest-y :as dest] (disj asteroids src)
-                :let [dx (- dest-x src-x)
-                      dy (- dest-y src-y)
-                      gcd (.gcd (biginteger dx) (biginteger dy))
-                      reduced-x (/ dx gcd)
-                      reduced-y (/ dy gcd)]]
-            [{:src src
-              :dest dest
-              :relative-loc [dx dy]
-              :direction [reduced-x reduced-y]}
+  (for [[src-x src-y :as src] asteroids
+        [dest-x dest-y :as dest] (disj asteroids src)
+        :let [dx (- dest-x src-x)
+              dy (- dest-y src-y)
+              gcd (.gcd (biginteger dx) (biginteger dy))
+              reduced-x (/ dx gcd)
+              reduced-y (/ dy gcd)]]
+    {:src src
+     :dest dest
+     :relative-loc [dx dy]
+     :direction [reduced-x reduced-y]}))
+
+(defn add-reverse-edges
+  [edges]
+  (mapcat (fn [{:keys [src dest relative-loc direction] :as edge}]
+            [edge
              {:src dest
               :dest src
-              :relative-loc [(- dx) (- dy)]
-              :direction [(- reduced-x) (- reduced-y)]}])))
+              :relative-loc (mapv - relative-loc)
+              :direction (mapv - direction)}])
+          edges))
 
 (defn visible-asteroids
   [input]
   (->> input
-       read-locations
+       (char-locs #{\#})
        build-edges
+       add-reverse-edges
        (group-by (juxt :src :direction))
        (map ffirst)
        frequencies))
@@ -805,3 +811,128 @@ I)SAN")))
     (is (= 210 (day-10 m))))
 
   (is (= 278 (day-10 (slurp "day-10.txt")))))
+
+(defn angle-from-north
+  [[dx dy]]
+  (let [+x (Math/abs (int dx))
+        +y (Math/abs (int dy))]
+    (condp = [(compare dx 0) (compare dy 0)]
+      [0 -1] 0
+      ;; top right
+      [1 -1] (Math/atan (/ +x +y))
+      [1 0] (* 1/2 Math/PI)
+      ;; bottom right
+      [1 1] (+ (* 1/2 Math/PI) (Math/atan (/ +y +x)))
+      [0 1] Math/PI
+      ;; bottom left
+      [-1 1] (+ Math/PI (Math/atan (/ +x +y)))
+      [-1 0] (* 3/2 Math/PI)
+      ;; top left
+      [-1 -1] (+ (* 3/2 Math/PI) (Math/atan (/ +y +x))))))
+
+(defn manhattan-dist
+  [[x y]]
+  (+ (Math/abs x)
+     (Math/abs y)))
+
+(defn round-robin-seq
+  [colls]
+  (when-not (empty? colls)
+      (into (mapv first colls)
+            (round-robin-seq (remove nil? (mapv next colls))))))
+
+(defn day-10-2
+  [station m]
+  (let [edges-by-angle (->> m
+                            (char-locs (set "#X"))
+                            build-edges
+                            (filter #(= station (:src %)))
+                            (mapv #(assoc %
+                                          :angle (angle-from-north (:direction %))
+                                          :distance (manhattan-dist (:relative-loc %))))
+                            (group-by :angle)
+                            ;; sort by angle from North to the key (:direction)
+                            (sort-by first)
+                            vals
+                            ;; sort each row so the closest is first
+                            (mapv #(sort-by :distance %)))]
+    ;; read first in round-robbin fashion
+    (mapv :dest (round-robin-seq edges-by-angle))))
+
+(deftest day-10-2-test
+  (is (= 0 (angle-from-north [0 -1])))
+  (is (= (Math/toRadians 45) (angle-from-north [1 -1])))
+  (is (= (Math/toRadians 90) (angle-from-north [1 0])))
+  (is (= (Math/toRadians 135) (angle-from-north [1 1])))
+  (is (= (Math/toRadians 180) (angle-from-north [0 1])))
+  (is (= (Math/toRadians 225) (angle-from-north [-1 1])))
+  (is (= (Math/toRadians 270) (angle-from-north [-1 0])))
+  (is (= (Math/toRadians 315) (angle-from-north [-1 -1])))
+  (let [m ".#....#####...#..
+##...##.#####..##
+##...#...#.#####.
+..#.....X...###..
+..#.#.....#....##"
+        first-nine ".#....###24...#..
+##...##.13#67..9#
+##...#...5.8####.
+..#.....X...###..
+..#.#.....#....##"
+        second-nine ".#....###.....#..
+##...##...#.....#
+##...#......1234.
+..#.....X...5##..
+..#.9.....8....76"
+        third-nine ".8....###.....#..
+56...9#...#.....#
+34...7...........
+..2.....X....##..
+..1.............."
+        fourth-nine "......234.....6..
+......1...5.....7
+.................
+........X....89..
+................."
+        station (first (char-locs #{\X} m))
+        first-expected (mapv #(first (char-locs #{%} first-nine)) "123456789")
+        second-expected (mapv #(first (char-locs #{%} second-nine)) "123456789")
+        third-expected (mapv #(first (char-locs #{%} third-nine)) "123456789")
+        fourth-expected (mapv #(first (char-locs #{%} fourth-nine)) "123456789")
+        result (day-10-2 station m)]
+    (is (= first-expected (take 9 result)))
+    (is (= second-expected (take 9 (drop 9 result))))
+    (is (= third-expected (take 9 (drop 18 result))))
+    (is (= fourth-expected (take 9 (drop 27 result)))))
+  (let [m ".#..##.###...#######
+##.############..##.
+.#.######.########.#
+.###.#######.####.#.
+#####.##.#.##.###.##
+..#####..#.#########
+####################
+#.####....###.#.#.##
+##.#################
+#####.##.###..####..
+..######..##.#######
+####.##.####...##..#
+.#####..#.######.###
+##...#.##########...
+#.##########.#######
+.####.#.###.###.#.##
+....##.##.###..#####
+.#.#.###########.###
+#.#.#.#####.####.###
+###.##.####.##.#..##"
+        order (day-10-2 [11 13] m)]
+    (is (= [[11 12] [12 1] [12 2]] (take 3 order)))
+    (is (= [12 8] (nth order (dec 10))))
+    (is (= [16 0] (nth order (dec 20))))
+    (is (= [16 9] (nth order (dec 50))))
+    (is (= [10 16] (nth order (dec 100))))
+    (is (= [9 6] (nth order (dec 199))))
+    (is (= [8 2] (nth order (dec 200))))
+    (is (= [10 9] (nth order (dec 201))))
+    (is (= [11 1]
+           (nth order 298)
+           (last order)))
+    (is (= [14 17] (nth (day-10-2 [23 19] (slurp "day-10.txt")) (dec 200))))))
