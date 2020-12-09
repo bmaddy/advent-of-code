@@ -34,8 +34,14 @@ part_1_test(A, B, Product) :-
     two_item_product(Ints, A, B, Product).
 
 part_1(A, B, Product) :-
-    phrase_from_file(integers(Ints), 'day01.txt'),
+    phrase_from_file(integers(Ints), 'input01.txt'),
     two_item_product(Ints, A, B, Product).
+
+%% ?- part_1(A, B, P).
+%% A = 586,
+%% B = 1434,
+%% P = 840324 ;
+%% false.
 
 three_items(A, B, C) --> ..., [A], two_items(B, C).
 
@@ -55,5 +61,12 @@ part_2_test(A, B, C, Product) :-
     three_item_product(Ints, A, B, C, Product).
 
 part_2(A, B, C, Product) :-
-    phrase_from_file(integers(Ints), 'day01.txt'),
+    phrase_from_file(integers(Ints), 'input01.txt'),
     three_item_product(Ints, A, B, C, Product).
+
+%% ?- part_2(A, B, C, P).
+%% A = 910,
+%% B = 903,
+%% C = 207,
+%% P = 170098110 ;
+%% false.
