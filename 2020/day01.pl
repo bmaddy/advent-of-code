@@ -18,7 +18,7 @@ integers([I|Is]) --> integer(I), separator, integers(Is).
 
 two_items(A, B) --> ..., [A], ..., [B], ... .
 
-input_2020_parts_product(Ints, A, B, Product) :-
+two_item_product(Ints, A, B, Product) :-
     phrase(two_items(A, B), Ints),
     2020 is A + B,
     Product is A*B.
@@ -31,8 +31,29 @@ part_1_test(A, B, Product) :-
 675
 1456", Cs),
     phrase(integers(Ints), Cs),
-    input_2020_parts_product(Ints, A, B, Product).
+    two_item_product(Ints, A, B, Product).
 
 part_1(A, B, Product) :-
     phrase_from_file(integers(Ints), 'day01.txt'),
-    input_2020_parts_product(Ints, A, B, Product).
+    two_item_product(Ints, A, B, Product).
+
+three_items(A, B, C) --> ..., [A], two_items(B, C).
+
+three_item_product(Ints, A, B, C, Product) :-
+    phrase(three_items(A, B, C), Ints),
+    2020 is A + B + C,
+    Product is A*B*C.
+
+part_2_test(A, B, C, Product) :-
+    string_codes("1721
+979
+366
+299
+675
+1456", Cs),
+    phrase(integers(Ints), Cs),
+    three_item_product(Ints, A, B, C, Product).
+
+part_2(A, B, C, Product) :-
+    phrase_from_file(integers(Ints), 'day01.txt'),
+    three_item_product(Ints, A, B, C, Product).
