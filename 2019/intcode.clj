@@ -110,6 +110,11 @@
                   (throw (Exception. (str "Unrecognized op for expression: " expr))))]
     (merge env {:pos next-pos} updates)))
 
+(defn step
+  "Run a single step."
+  [env]
+  (eval-expr env (read-expr env)))
+
 (defn run
   ([program] (run program []))
   ([program input]
@@ -119,4 +124,4 @@
                         input)]
      (if (:done env)
        env
-       (recur (eval-expr env (read-expr env)))))))
+       (recur (step env))))))

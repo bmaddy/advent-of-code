@@ -5,7 +5,9 @@
             [clojure.set :as set]
             [clojure.tools.trace :refer [deftrace]]
             [clojure.math.combinatorics :as combo]
-            [clojure.core.async :as a :refer [go go-loop chan <! >! <!! >!!]]))
+            [clojure.core.async :as a :refer [go go-loop chan <! >! <!! >!!]]
+            [intcode :as int]
+            [sc.api]))
 
 (defn fuel
   [mass]
@@ -936,3 +938,72 @@ I)SAN")))
            (nth order 298)
            (last order)))
     (is (= [14 17] (nth (day-10-2 [23 19] (slurp "day-10.txt")) (dec 200))))))
+
+(def turn-left
+  {[0 -1] [-1 0]
+   [-1 0] [0 1]
+   [0 1] [1 0]
+   [1 0] [0 -1]})
+
+(def turn-right
+  (set/map-invert turn-left))
+
+(defn robot-step
+  [{:keys [pos orientation white-panels env] :as state}]
+  ;; (prn `(robot-step ~state))
+  (let [input (if (contains? white-panels pos) 1 0)
+        _ (sc.api/spy)                  ;
+        new-env (->> (update env :in conj input)
+                     (iterate int/step)
+                     (drop-while #(-> % :out pop peek nil?))
+                     (map #(dissoc % :data))
+                     first)
+        [color-id turn-id] (take 2 (:out new-env))
+        new-orientation (if (zero? turn-id)
+                          (turn-left orientation)
+                          (turn-right orientation))
+        new-pos (mapv + pos new-orientation)]
+    (assoc state
+           :pos new-pos
+           :orientation new-orientation
+           :white-panels (if (zero? color-id)
+                           (disj white-panels pos)
+                           (conj white-panels pos))
+           :env (update new-env :out (comp pop pop)))))
+
+(defn day-11
+  [program]
+  (let [state {:pos [0 0]
+               :orientation [0 -1]
+               :white-panels #{}
+               :env (int/make-env (int/read-syms program) [])}]
+    (loop [{:keys [env] :as state} state
+           states []]
+      (if (:done env)
+        (->> states (map :pos) (into #{}) count)
+        (recur (robot-step state) (conj states state))))))
+
+(deftest day-11-test
+  (let [states
+        [{:orientation [0 -1] :env {:in [] :out [1 0]} :pos [0 0] :white-panels #{}}
+         {:orientation [-1 0] :env {:in [] :out [0 0]} :pos [-1 0] :white-panels #{[0 0]}}
+         {:orientation [0 1] :env {:in [] :out [1 0]} :pos [-1 1] :white-panels #{[0 0]}}
+         {:orientation [1 0] :env {:in [] :out [1 0]} :pos [0 1] :white-panels #{[0 0] [-1 1]}}
+         {:orientation [0 -1] :env {:in [] :out [0 1]} :pos [0 0] :white-panels #{[0 0] [-1 1]
+                                                                                  [0 1]}}
+         {:orientation [1 0] :env {:in [] :out [1 0]} :pos [1 0] :white-panels #{[-1 1] [0 1]}}
+         {:orientation [0 -1] :env {:in [] :out [1 0]} :pos [1 -1] :white-panels #{[-1 1] [0 1]
+                                                                                   [1 0]}}
+         {:orientation [-1 0] :env {:in [] :out []} :pos [0 -1] :white-panels #{[-1 1] [0 1]
+                                                                                [1 0] [1 -1]}}]
+        ks [:pos :orientation :white-panels]]
+    (with-redefs [int/step identity]
+      (is (= (-> states second (select-keys ks)) (select-keys (robot-step (first states)) ks)))
+      (is (= (-> states (nth 2) (select-keys ks)) (select-keys (robot-step (second states)) ks)))
+      (is (= (-> states (nth 3) (select-keys ks)) (select-keys (robot-step (nth states 2)) ks)))
+      (is (= (-> states (nth 4) (select-keys ks)) (select-keys (robot-step (nth states 3)) ks)))
+      (is (= (-> states (nth 5) (select-keys ks)) (select-keys (robot-step (nth states 4)) ks)))
+      (is (= (-> states (nth 6) (select-keys ks)) (select-keys (robot-step (nth states 5)) ks)))
+      (is (= (-> states last (select-keys ks)) (select-keys (robot-step (nth states 6)) ks))))
+    (is (= 6 (->> states butlast (map :pos) (into #{}) count))))
+  #_(is (= 0 (day-11 (slurp "day-11.txt")))))
