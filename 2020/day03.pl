@@ -51,3 +51,22 @@ tree_coord(Y, Cs) -->
 %?- test_input(T), phrase(tree_coord(0, Cs), T, Rest).
 
 %?- phrase_from_file(tree_coord(0, Cs), 'input03.txt').
+
+coord(x, X, [X|_]).
+coord(y, Y, [_,Y]).
+
+max_coord(Axis, Max, [P]) :-
+    coord(Axis, Max, P).
+max_coord(Axis, Max, [P|T]) :-
+    coord(Axis, Max1, P),
+    max_coord(Axis, Max2, T),
+    Max is max(Max1, Max2).
+%% ?- phrase_from_file(tree_coord(0, Cs), 'input03.txt'), max_coord(x, X, Cs).
+%% Cs = [[1, 0], [2, 0], [16, 0], [17, 0], [24, 0], [30, 0], [1, 1], [3|...], [...|...]|...],
+%% X = 30 ;
+%% false.
+
+%% ?- phrase_from_file(tree_coord(0, Cs), 'input03.txt'), max_coord(y, Y, Cs).
+%% Cs = [[1, 0], [2, 0], [16, 0], [17, 0], [24, 0], [30, 0], [1, 1], [3|...], [...|...]|...],
+%% Y = 322 ;
+%% false.
