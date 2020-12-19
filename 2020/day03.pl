@@ -11,38 +11,44 @@ test_input(`..##.......
 .#..#...#.#`).
 test_row(`..##.......`).
 
-%% column_trees(_, [], [], []).
-column_trees(Col, [Col|Ts]) -->
+column_trees(X, Y, [[X, Y]|Ts]) -->
     `#`,
-    { succ(Col, Next_Col) },
-    column_trees(Next_Col, Ts).
-column_trees(Col, Ts) -->
+    { succ(Y, Next_Y) },
+    column_trees(X, Next_Y, Ts).
+column_trees(X, Y, Ts) -->
     `.`,
-    { succ(Col, Next_Col) },
-    column_trees(Next_Col, Ts),
+    { succ(Y, Next_Y) },
+    column_trees(X, Next_Y, Ts),
     !.
-column_trees(Col, [Col]) --> `#`.
-column_trees(_, []) --> `.`.
-%?- phrase(column_trees(0, Ts), `..##.......`, Rest).
-%% Ts = [2, 3]
+column_trees(X, Y, [[X, Y]]) --> `#`.
+column_trees(_, _, []) --> `.`.
+%?- phrase(column_trees(0, 0, Ts), `..##.......`, Rest).
+%% Ts = [[0, 2], [0, 3]]
 
-%?- phrase(column_trees(0, Ts), `..##.......
+
+%?- phrase(column_trees(0, 0, Ts), `..##.......
 %?- `, Rest).
-%% Ts = [2, 3]
+%% Ts = [[0, 2], [0, 3]]
 
 end_of_string([], []).
 
-tree_coord(Row, [Cols]) -->
-    column_trees(0, Cols),
+tree_coord(X, Cs) -->
+    column_trees(X, 0, Cs),
     end_of_string.
-tree_coord(Row, [Cols|Cs]) -->
-    column_trees(0, Cols),
+tree_coord(X, Cs) -->
+    column_trees(X, 0, A),
     "\n",
-    { succ(Row, Next_Row) },
-    tree_coord(Next_Row, Cs).
+    { succ(X, Next_X) },
+    tree_coord(Next_X, B),
+    { append(A, B, Cs)}.
+%?- phrase(tree_coord(0, Cs), `..##.......`, Rest).
+%% Cs = [[0, 2], [0, 3]]
+
 %?- phrase(tree_coord(0, Cs), `..##.......
 %?- #...#...#..`, Rest).
-%% Cs = [[2, 3], [0, 4, 8]]
+%% Cs = [[0, 2], [0, 3], [1, 0], [1, 4], [1, 8]],
 
 %?- test_input(T), phrase(tree_coord(0, Cs), T, Rest).
-%% Cs = [[2, 3], [0, 4, 8], [1, 6, 9], [2, 4, 8, 10], [1, 5, 6, 9], [2, 4, 5], [1, 3|...], [1|...], [...|...]|...],
+
+%% Fixme
+%?- phrase_from_file(tree_coord(0, Cs), 'input03.txt').
