@@ -34,7 +34,7 @@ end_of_string([], []).
 
 tree_coord(X, Cs) -->
     column_trees(X, 0, Cs),
-    end_of_string.
+    ( "\n" | end_of_string ).
 tree_coord(X, Cs) -->
     column_trees(X, 0, A),
     "\n",
