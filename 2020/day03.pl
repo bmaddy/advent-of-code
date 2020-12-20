@@ -62,3 +62,11 @@ max_xy([X,Y], [[X1,Y1]|T]) :-
 %% X = 30,
 %% Y = 322 ;
 %% false.
+
+%% a slope describes a line when subsequent points are [X,Y] away from previous points.
+slope_line(_, []).
+slope_line(_, [_|[]]).
+slope_line([X,Y], [[X1,Y1], [X2,Y2]|Ps]) :-
+    plus(X1, X, X2),
+    plus(Y1, Y, Y2),
+    slope_line([X,Y], [[X2,Y2]|Ps]).
