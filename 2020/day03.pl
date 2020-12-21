@@ -73,13 +73,44 @@ slope_wrapped_line([X,Y], Width, [[X1,Y1], [Wrapped_X,Y2]|Ps]) :-
     slope_wrapped_line([X,Y], Width, [[Wrapped_X,Y2]|Ps]).
 %?- length(S, 5), slope_wrapped_line([3,1], [[0,0]|S]).
 
-/*
+keep_list([], _, []).
+keep_list([H|T], Good, [H|Filtered]) :- member(H, Good), !, keep_list(T, Good, Filtered).
+keep_list([_|T], Good, Filtered) :- keep_list(T, Good, Filtered).
 
+/*
 test_input(Input),
 phrase(tree_coord(0, Trees), Input),
+%% Technically this should be based off the input string, but I have trees in
+%% the last column and final row, so this works for my input
 max_xy([Max_X,Max_Y], Trees),
 divmod(Max_Y, 1, Step_Count, _),
 length(Steps, Step_Count),
-slope_wrapped_line([3,1], Max_X, [[0,0]|Steps]).
+succ(Max_X, Width),
+slope_wrapped_line([3,1], Width, [[0,0]|Steps]),
+keep_list(Steps, Trees, Hits).
 
+expected Hits = [[6,2], [1, 4], [4, 5], [10, 7], [2, 8], [5, 9], [8, 10]]
 */
+
+path_hits(Trees, [DX,DY], Hit_Count) :-
+    %% Finds the largest available X and Y coordinates. Technically, this should
+    %% be based off the input string, but I have trees in the last column and
+    %% final row, so this works for my input.
+    max_xy([Max_X,Max_Y], Trees),
+    divmod(Max_Y, DY, Step_Count, _),
+    length(Steps, Step_Count),
+    %% Width is one more than the largest possible X position.
+    succ(Max_X, Width),
+    slope_wrapped_line([DX,DY], Width, [[0,0]|Steps]),
+    keep_list(Steps, Trees, Hits),
+    length(Hits, Hit_Count).
+
+part_1_test(N) :-
+    test_input(Input),
+    phrase(tree_coord(0, Trees), Input),
+    path_hits(Trees, [3,1], N).
+
+part_1(N) :-
+    phrase_from_file(tree_coord(0, Trees), 'input03.txt'),
+    path_hits(Trees, [3,1], N).
+
