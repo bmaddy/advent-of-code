@@ -64,9 +64,22 @@ max_xy([X,Y], [[X1,Y1]|T]) :-
 %% false.
 
 %% a slope describes a line when subsequent points are [X,Y] away from previous points.
-slope_line(_, []).
-slope_line(_, [_|[]]).
-slope_line([X,Y], [[X1,Y1], [X2,Y2]|Ps]) :-
+slope_wrapped_line(_, _, []).
+slope_wrapped_line(_, _, [_|[]]).
+slope_wrapped_line([X,Y], Width, [[X1,Y1], [Wrapped_X,Y2]|Ps]) :-
     plus(X1, X, X2),
+    Wrapped_X is X2 mod Width,
     plus(Y1, Y, Y2),
-    slope_line([X,Y], [[X2,Y2]|Ps]).
+    slope_wrapped_line([X,Y], Width, [[Wrapped_X,Y2]|Ps]).
+%?- length(S, 5), slope_wrapped_line([3,1], [[0,0]|S]).
+
+/*
+
+test_input(Input),
+phrase(tree_coord(0, Trees), Input),
+max_xy([Max_X,Max_Y], Trees),
+divmod(Max_Y, 1, Step_Count, _),
+length(Steps, Step_Count),
+slope_wrapped_line([3,1], Max_X, [[0,0]|Steps]).
+
+*/
