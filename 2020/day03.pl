@@ -109,8 +109,35 @@ part_1_test(N) :-
     test_input(Input),
     phrase(tree_coord(0, Trees), Input),
     path_hits(Trees, [3,1], N).
+%% part_1_test(N).
+%% N = 7 ;
+%% false.
 
 part_1(N) :-
     phrase_from_file(tree_coord(0, Trees), 'input03.txt'),
     path_hits(Trees, [3,1], N).
+%% ?- part_1(N).
+%% N = 176 ;
 
+many_slopes_product(Trees, Product) :-
+    many_slopes_product(Trees, [[1,1], [3,1], [5,1], [7,1], [1,2]], Product).
+many_slopes_product(_, [], 1).
+many_slopes_product(Trees, [Slope|Ss], Product) :-
+    path_hits(Trees, Slope, N),
+    many_slopes_product(Trees, Ss, Rest),
+    Product is N*Rest.
+
+part_2_test(N) :-
+    test_input(Input),
+    phrase(tree_coord(0, Trees), Input),
+    many_slopes_product(Trees, N).
+%% ?- part_2_test(N).
+%% N = 336 ;
+%% false.
+
+part_2(N) :-
+    phrase_from_file(tree_coord(0, Trees), 'input03.txt'),
+    many_slopes_product(Trees, N).
+%% ?- part_2(N).
+%% N = 5872458240 ;
+%% false.
