@@ -1,4 +1,6 @@
 :- use_module(library(dcg/basics)).
+:- use_module(library(assoc)).
+:- use_module(library(pairs)).
 
 %% ?- portray_text(true).
 %% true.
@@ -19,9 +21,9 @@ iyr:2011 ecl:brn hgt:59in`).
 
 %% ... --> [] | [_], ... .
 
-pair(Key, Value) --> string_without(":", Key), ":", nonblanks(Value).
+pair(Key-Value) --> string_without(":", Key), ":", nonblanks(Value).
 %% test_input(T), phrase(pair(K, V), T, Rest).
 
-pairs([pair(K, V)]) --> pair(K, V), ( "\n\n" | eos ), !.
-pairs([pair(K, V)|Ps]) --> pair(K, V), ( " " | "\n" ), pairs(Ps).
+pairs([K-V]) --> pair(K-V), ( "\n\n" | eos ), !.
+pairs([K-V|Ps]) --> pair(K-V), ( " " | "\n" ), pairs(Ps).
 %% test_input(T), phrase(pairs(Ps), T, Rest).
