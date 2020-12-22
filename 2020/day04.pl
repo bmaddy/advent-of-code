@@ -53,3 +53,13 @@ part_1(N) :-
 %% ?- part_1(N).
 %% N = 213 ;
 %% false.
+
+valid_passport(P) :-
+    has_required_keys(P),
+    phrase(valid_values, P).
+
+valid_values(V) --> ecl(V).
+
+ecl(A) --> [ecl-V], { atom_string(A, V), member(A, [amb, blu, brn, gry, grn, hzl, oth]) }.
+
+%% Ps = [ecl-"gry", pid-"860033327", eyr-"2020", hcl-"#fffffd", byr-"1937", iyr-"2017", cid-"147", hgt-"183cm"], phrase(ecl, Ps, Rest).
