@@ -25,7 +25,7 @@ pair(K-Value) --> string_without(":", Key), ":", nonblanks(Value), { atom_string
 %% test_input(T), phrase(pair(K, V), T, Rest).
 
 %% pairs([K-V]) --> pair(K-V), ( "\n\n" | end_of_string ), !.
-pairs([K-V]) --> pair(K-V), "\n", ( "\n" | end_of_string ), !.
+pairs([K-V]) --> pair(K-V), ( "\n\n" | ("\n", end_of_string ) | end_of_string ), !.
 pairs([K-V|Ps]) --> pair(K-V), ( " " | "\n" ), pairs(Ps).
 %% test_input(T), phrase(pairs(Ps), T, Rest).
 
