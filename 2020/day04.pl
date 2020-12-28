@@ -20,15 +20,6 @@ hgt:179cm
 hcl:#cfa07d eyr:2025 pid:166559648
 iyr:2011 ecl:brn hgt:59in`).
 
-pair(K-V) -->
-    ecl(K-V)
-    ; pid(K-V)
-    ; eyr(K-V)
-    ; hcl(K-V)
-    ; byr(K-V)
-    ; iyr(K-V)
-    ; cid(K-V)
-    ; hgt(K-V).
 pair(K-V) --> key(K), nonblanks(V).
 %% test_input(T), phrase(pair(KV), T, Rest).
 
@@ -92,3 +83,70 @@ cid(cid-V) --> key(cid), nonblanks(V).
 %% A = [byr-2002, hgt-60, hgt-190, hcl-[18, 58, 188], ecl-"brn", pid-"000000001"].
 %% ?- phrase(( ..., pairs(A), ... ), `byr:2003 hgt:190in hgt:190 hcl:#123abz hcl:123abc ecl:wat pid:0123456789`).
 %% false.
+
+valid_pair(K-V) -->
+    ecl(K-V)
+    ; pid(K-V)
+    ; eyr(K-V)
+    ; hcl(K-V)
+    ; byr(K-V)
+    ; iyr(K-V)
+    ; cid(K-V)
+    ; hgt(K-V).
+
+valid_pairs([P]) --> valid_pair(P), ( "\n\n" | ("\n", end_of_string ) | end_of_string ), !.
+valid_pairs([P|Ps]) --> valid_pair(P), ( " " | "\n" ), !, valid_pairs(Ps).
+
+valid_passports([]) --> ( "\n" | end_of_string ).
+valid_passports([P|Ps]) --> ..., valid_pairs(P), !, ..., valid_passports(Ps), !.
+
+invalid_input(`eyr:1972 cid:100
+hcl:#18171d ecl:amb hgt:170 pid:186cm iyr:2018 byr:1926
+
+iyr:2019
+hcl:#602927 eyr:1967 hgt:170cm
+ecl:grn pid:012533040 byr:1946
+
+hcl:dab227 iyr:2012
+ecl:brn hgt:182cm pid:021572410 eyr:2020 byr:1992 cid:277
+
+hgt:59cm ecl:zzz
+eyr:2038 hcl:74454a iyr:2023
+pid:3556412378 byr:2007`).
+
+valid_input(`pid:087499704 hgt:74in ecl:grn iyr:2012 eyr:2030 byr:1980
+hcl:#623a2f
+
+eyr:2029 ecl:blu cid:129 byr:1989
+iyr:2014 pid:896056539 hcl:#a97842 hgt:165cm
+
+hcl:#888785
+hgt:164cm byr:2001 iyr:2015 cid:88
+pid:545766238 ecl:hzl
+eyr:2022
+
+iyr:2010 hgt:158cm hcl:#b6652a ecl:blu byr:1944 eyr:2021 pid:093154719`).
+
+part_2_invalid_test(N) :-
+    invalid_input(Input),
+    phrase(valid_passports(Ps), Input),
+    include(has_required_keys, Ps, Valid),
+    length(Valid, N).
+%% ?- part_2_invalid_test(N).
+%% false.
+
+part_2_valid_test(N) :-
+    valid_input(Input),
+    phrase(valid_passports(Ps), Input),
+    include(has_required_keys, Ps, Valid),
+    length(Valid, N).
+%% ?- part_2_valid_test(N).
+%% N = 4 ;
+%% false.
+
+part_2(N) :-
+    phrase_from_file(valid_passports(Ps), 'input04.txt'),
+    include(has_required_keys, Ps, Valid),
+    length(Valid, N).
+%% ?- part_2(N).
+%% N = 147.
