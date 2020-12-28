@@ -1,6 +1,7 @@
 :- use_module(library(dcg/basics)).
 :- use_module(library(assoc)).
 :- use_module(library(pairs)).
+:- use_module(library(crypto)).
 
 %% ?- portray_text(true).
 %% true.
@@ -19,11 +20,20 @@ hgt:179cm
 hcl:#cfa07d eyr:2025 pid:166559648
 iyr:2011 ecl:brn hgt:59in`).
 
-pair(K-Value) --> string_without(":", Key), ":", nonblanks(Value), { atom_string(K, Key) }.
-%% test_input(T), phrase(pair(K, V), T, Rest).
+pair(K-V) -->
+    ecl(K-V)
+    ; pid(K-V)
+    ; eyr(K-V)
+    ; hcl(K-V)
+    ; byr(K-V)
+    ; iyr(K-V)
+    ; cid(K-V)
+    ; hgt(K-V).
+pair(K-V) --> key(K), nonblanks(V).
+%% test_input(T), phrase(pair(KV), T, Rest).
 
-pairs([K-V]) --> pair(K-V), ( "\n\n" | ("\n", end_of_string ) | end_of_string ), !.
-pairs([K-V|Ps]) --> pair(K-V), ( " " | "\n" ), pairs(Ps).
+pairs([P]) --> pair(P), ( "\n\n" | ("\n", end_of_string ) | end_of_string ), !.
+pairs([P|Ps]) --> pair(P), ( " " | "\n" ), !, pairs(Ps).
 %% test_input(T), phrase(pairs(Ps), T, Rest).
 
 end_of_string([], []).
@@ -54,76 +64,31 @@ part_1(N) :-
 %% N = 213 ;
 %% false.
 
-valid_passport(P) :-
+valid_passport(P, Pairs, Rest) :-
     has_required_keys(P),
-    pairs_to_lists(P, L),
-    phrase(valid_values, L).
+    %% pairs_to_lists(P, L),
+    phrase(valid_values(Pairs), P, Rest).
 
-pairs_to_lists([], []).
-pairs_to_lists([A-B|Ps], [[A,B]|Ls]) :- pairs_to_lists(Ps, Ls).
+%% ?- test_input(I), phrase(passports([P|_]), I), valid_passport(P, Pairs, Rest).
 
-valid_values([[K,V]|Ps]) --> [[K,V]], { valid_pair(K, V) }, !, valid_values(Ps).
-valid_values([]) --> [].
+... --> [] | [_], ... .
 
-valid_pair(ecl, V) :- ecl(V).
-valid_pair(pid, V) :- pid(V).
-valid_pair(eyr, V) :- eyr(V).
+key(K) --> string_without(":", S), ":", { atom_string(K, S) }.
 
-ecl(V) :- atom_string(A, V), member(A, [amb, blu, brn, gry, grn, hzl, oth]).
-pid(V) :- length(V, 9), phrase(number(_), V, []).
-eyr(V) :- length(V, 4), phrase(number(N), V, []), between(2020, 2030, N).
+byr(byr-V) --> key(byr), integer(V), { between(1920, 2002, V) }.
+iyr(iyr-V) --> key(iyr), integer(V), { between(2010, 2020, V) }.
+eyr(eyr-V) --> key(eyr), integer(V), { between(2020, 2030, V) }.
+hgt(hgt-V) --> key(hgt), integer(V), "cm", { between(150, 193, V) }.
+hgt(hgt-V) --> key(hgt), integer(V), "in", { between(59, 76, V) }.
 
-%% phrase(vv(V), [[ecl, `gry`], [pid, `860033327`], [eyr, `2020`]], Rest).
+hcl(hcl-V) --> key(hcl), "#", nonblanks(S), { catch(hex_bytes(S, V), _, false) }.
+ecl(ecl-V) -->
+    key(ecl), nonblanks(V),
+    { atom_string(A, V), member(A, [amb, blu, brn, gry, grn, hzl, oth]) }.
+pid(pid-V) --> key(pid), digits(V), { length(V, 9) }.
+cid(cid-V) --> key(cid), nonblanks(V).
 
-
-%% valid_values([V|Vs]) --> ( ecl(V) | pid(V) ), !, valid_values(Vs).
-%% valid_values([]) --> [].
-
-
-%% ecl(A) --> [[ecl,V]], { atom_string(A, V), member(A, [amb, blu, brn, gry, grn, hzl, oth]) }.
-%% %% pid(N) --> [[pid, N]].
-%% pid(N) --> [[pid, string(N)]].
-
-%% list([])     --> [].
-%% list([L|Ls]) --> [L], list(Ls).
-
-%% concatenation([]) --> [].
-%% concatenation([List|Lists]) -->
-%%     list(List),
-%%     concatenation(Lists).
-
-%% flatten1([A, B|T]) --> [[A, B]], !, flatten1(T).
-%% flatten1([]) --> [].
-
-%% vv([V|Vs]) --> flatten1(V), vv(Vs).
-%% vv([]) --> [].
-
-%% vv(V) --> e(V).
-
-%% %% e(V) --> [[_,V]].
-%% e(V) --> [[_,V]], int(V).
-%% p(V) --> V, _.
-
-%% int(N) --> integer(N).
-
-%% phrase(vv(V), [[ecl, "gry"], [pid, "860033327"], [eyr, "2020"]], Rest).
-%% integer(N, `123`, Rest).
-
-%% NEXT: try writing as normal prolog
-%% !!! we aren't parsing a list, it's nested
-%% "The most common use of DCGs is to parse some list of symbols"
-
-
-
-%% Ps = [ecl-"gry", pid-"860033327", eyr-"2020", hcl-"#fffffd", byr-"1937", iyr-"2017", cid-"147", hgt-"183cm"], pairs_to_lists(Ps, Ls), phrase(valid_values(V), Ls, Rest).
-
-%% valid_values2([]).
-%% valid_values2([P|Ps]) :-
-%%     ecl2(P)
-%%     ;  pid(P),
-%%     valid_values2(Ps).
-
-%% ecl2([ecl, V]) :- atom_string(A, V), member(A, [amb, blu, brn, gry, grn, hzl, oth]).
-%% pid([pid, V]) :- 
-
-%% Ps = [ecl-"gry"], pairs_to_lists(Ps, Ls), valid_values2(Ls).
+%% ?- phrase(pairs(A), `byr:2002 hgt:60in hgt:190cm hcl:#123abc ecl:brn pid:000000001`).
+%% A = [byr-2002, hgt-60, hgt-190, hcl-[18, 58, 188], ecl-"brn", pid-"000000001"].
+%% ?- phrase(( ..., pairs(A), ... ), `byr:2003 hgt:190in hgt:190 hcl:#123abz hcl:123abc ecl:wat pid:0123456789`).
+%% false.
