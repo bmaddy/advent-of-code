@@ -48,7 +48,7 @@ seat(Row, Col, Id) --> row(0, 128, Row), col(0, 8, Col), { Id is 8*Row + Col }.
 
 end_of_string([], []).
 
-highest_seat(Id) --> seat(_, _, Id), ( ( "\n", end_of_string ) | end_of_string ).
+highest_seat(Id) --> seat(_, _, Id), ( "\n", end_of_string | end_of_string ).
 highest_seat(Id) --> seat(_, _, A), "\n", highest_seat(B), !, { Id is max(A, B) }.
 %% ?- test_input(I), phrase(highest_seat(Id), I, Rest).
 %% I = "FBFBBFFRLR\nBFFFBBFRRR\nFFF...BFRLL",
@@ -65,3 +65,24 @@ part_1(Id) :-
     phrase_from_file(highest_seat(Id), 'input05.txt').
 %% ?- part_1(Id).
 %% Id = 842.
+
+seat_ids([Id]) --> seat(_, _, Id), ( "\n", end_of_string | end_of_string ).
+seat_ids([H|T]) --> seat(_, _, H), "\n", seat_ids(T), !.
+%% ?- test_input(I), phrase(seat_ids(L), I, Rest).
+%% I = "FBFBBFFRLR\nBFFFBBFRRR\nFFF...BFRLL",
+%% L = [357, 567, 119, 820],
+%% Rest = [].
+
+part_2(Id) :-
+    phrase_from_file(seat_ids(Ids), 'input05.txt'),
+    Min is 0,
+    Max is 127*8 + 7,
+    between(Min, Max, Id),
+    member(Previous, Ids),
+    not(member(Id, Ids)),
+    member(Next, Ids),
+    succ(Previous, Id),
+    succ(Id, Next).
+%% ?- part_2(Id).
+%% Id = 617 ;
+%% false.
