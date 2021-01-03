@@ -2,20 +2,32 @@
 
 %% portray_text(true).
 
-rules([H|T]) --> rule(H), "\n", rules(T), !.
-rules([R]) --> rule(R), ( "\n" | [] ), end_of_string.
+rules --> rule, "\n", rules, !.
+rules --> rule, ( "\n" | [] ), end_of_string.
 
-end_of_string([], []).
-
-rule(rule(B, C)) --> bag(B), " contain ", contents(C), ".".
+rule --> bag(Outer), " contain ", contents(Outer), ".".
 
 bag(bag(Adj, Color)) --> nonblanks(Adj), whites, nonblanks(Color), " bag", ( "s" | [] ), !.
 
-contents([H|T]) --> item(H), ", ", contents(T), !.
-contents([I]) --> item(I).
-contents([]) --> "no other bags".
+contents(Outer) --> item(Inner, N), ", ",
+                    { assertz(contains(Outer, Inner, N)) },
+                    !,
+                    contents(Outer).
+contents(Outer) --> item(Inner, N), { assertz(contains(Outer, Inner, N)) }.
+contents(_) --> "no other bags".
 
-item(N-B) --> integer(N), whites, bag(B).
+item(B, N) --> integer(N), whites, bag(B).
+
+end_of_string([], []).
+
+reload_test(Rest) :-
+    abolish(contains/3),
+    test_input(I), phrase(rules, I, Rest).
+%% ?- reload_test(R).
+%% R = [].
+%% ?- contains(A, B, 6).
+%% A = bag("vibrant", "plum"),
+%% B = bag("dotted", "black").
 
 test_input(`light red bags contain 1 bright white bag, 2 muted yellow bags.
 dark orange bags contain 3 bright white bags, 4 muted yellow bags.
