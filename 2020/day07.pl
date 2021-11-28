@@ -33,8 +33,13 @@ reload_input :-
 
 %% grouped_contains(P, [C, N]) :- contains(P, C, N).
 
-bag_count(B, 0) :- \+ contains(B, _).
+bag_contents(B, Cs) :- setof(C, contains(B, C), Cs).
+
+bag_count(B, 1) :- \+ contains(B, _).
 %% bag_count(B, N) :- setof(B, contains(B, C-N), .
+%% WORKING HERE: there must be a way to return all counts and what to multiply them by...
+%% could we do bottom up somehow?
+bag_count(P, N) :- contains(P, C-Mult), bag_count(C, Desc_count), { N is Mult*Desc_count }.
 
 
 
@@ -44,12 +49,16 @@ part_1(N) :-
     reload_input,
     setof(A, path(A, bag(shiny, gold)), As),
     length(As, N).
+%% ?- time(part_1(N)).
+%% % 595,270 inferences, 12.305 CPU in 12.350 seconds (100% CPU, 48376 Lips)
 %% N = 252.
 
 part_1_test(N) :-
     reload_test(_),
     setof(A, path(A, bag(shiny, gold)), As),
     length(As, N).
+%% ?- time(part_1_test(N)).
+%% % 1,618 inferences, 0.001 CPU in 0.002 seconds (41% CPU, 2436747 Lips)
 %% N = 4.
 
 reload_test :- reload_test(_).
