@@ -6,7 +6,7 @@
 
 portray_text(true).
 
-test1_input(`199
+test_input(`199
 200
 208
 210
@@ -29,7 +29,7 @@ ints_increasing(Parsed, Answer) :-
     length(Filtered, Answer).
 
 test1(Answer) :-
-    test1_input(Input),
+    test_input(Input),
     phrase(ints(Parsed), Input),
     ints_increasing(Parsed, Answer).
 
@@ -44,3 +44,35 @@ solve1(Answer) :-
 %?- solve1(Ans).
 %@ Ans = 1553 ;
 %@ false.
+
+rolling_sum([], []).
+rolling_sum([_], []).
+rolling_sum([_,_], []).
+rolling_sum([A,B,C|T], [Sum|Sums]) :-
+    Sum #= A + B + C,
+    rolling_sum([B,C|T], Sums).
+
+test2(Answer) :-
+    test_input(Input),
+    phrase(ints(Parsed), Input),
+    rolling_sum(Parsed, Sums),
+    ints_increasing(Sums, Answer).
+
+%?- test2(Ans).
+%@ Ans = 5 ;
+%@ false.
+
+solve2(Answer) :-
+    phrase_from_file(ints(Parsed), "input01.txt"),
+    rolling_sum(Parsed, Sums),
+    ints_increasing(Sums, Answer).
+
+%?- solve2(Ans).
+%@ Ans = 1597 ;
+%@ false.
+
+%?- rolling_sum([], A).
+%?- rolling_sum([1], A).
+%?- rolling_sum([1,2], A).
+%?- rolling_sum([1,2,3], A).
+%?- rolling_sum([1,2,3,4], A).
