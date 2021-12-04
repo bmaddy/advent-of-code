@@ -37,8 +37,8 @@ solve1(Answer) :-
     phrase_from_file(ints(Parsed), "input01.txt"),
     ints_increasing(Parsed, Answer).
 
-%?- test1(Ans).
-%@ Ans = 7 ;
+%?- test1(7).
+%@ true ;
 %@ false.
 
 %?- solve1(Ans).
@@ -58,8 +58,8 @@ test2(Answer) :-
     rolling_sum(Parsed, Sums),
     ints_increasing(Sums, Answer).
 
-%?- test2(Ans).
-%@ Ans = 5 ;
+%?- test2(5).
+%@ true ;
 %@ false.
 
 solve2(Answer) :-
@@ -70,9 +70,3 @@ solve2(Answer) :-
 %?- solve2(Ans).
 %@ Ans = 1597 ;
 %@ false.
-
-%?- rolling_sum([], A).
-%?- rolling_sum([1], A).
-%?- rolling_sum([1,2], A).
-%?- rolling_sum([1,2,3], A).
-%?- rolling_sum([1,2,3,4], A).
