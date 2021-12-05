@@ -1,10 +1,7 @@
 :- use_module(library(dcg/basics)).
-:- use_module(library(listing)).
 :- use_module(library(clpfd)).
-:- use_module(library(readutil), [read_line_to_string/2]).
-:- use_module(library(apply)).
 
-portray_text(true).
+%?- portray_text(true).
 
 test_input(`199
 200
