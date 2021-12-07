@@ -89,9 +89,6 @@ report_col_co2_rating(Report, N, Rating) :-
     common_bit_report_partition(N, Report, _, R1),
     succ(N, N1),
     report_col_co2_rating(R1, N1, Rating).
-%?- report_col_co2_rating([[1,0,1,1,1]], 4, A).
-%?- report_col_co2_rating([[1,0,1,1,0], [1,0,1,1,1]], 3, A).
-%?- report_col_co2_rating([[1,0,1,1,0], [1,0,1,1,1], [1,0,1,0,1]], 2, A).
 
 solve2(Report, Answer) :-
     report_col_oxygen_rating(Report, 0, Oxygen_bin),
