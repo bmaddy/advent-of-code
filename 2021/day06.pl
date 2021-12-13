@@ -42,10 +42,36 @@ ints([I|Is]) --> integer(I), `,`, ints(Is).
 %@ count(363101) ;
 %@ false.
 
+step(0, [6, 8]).
+step(T0, [T1]) :- succ(T1, T0).
+step_all([], []).
+step_all([H0|T0], Updated) :-
+    step(H0, L),
+    step_all(T0, T),
+    append(L, T, Updated).
+%?- step_all([3,4,3,1,2], U).
+
+populate(0, Timers, Count) :- length(Timers, Count).
+populate(Day, T0, Count) :-
+    succ(DayN, Day),
+    step_all(T0, T1),
+    populate(DayN, T1, Count).
+%?- populate(80, [3, 4, 3, 1, 2], C).
+
+test1(Answer) :-
+    test_input(Input),
+    phrase(ints(Is), Input),
+    populate(80, Is, Answer).
+%?- test1(5934).
+
+part1(Answer) :-
+    phrase_from_file(ints(Is), "input06.txt"),
+    populate(80, Is, Answer).
+%?- part1(Answer).
+%@ ERROR: Stack limit (1.0Gb) exceeded
 
 %% Part 2:
 
 %?- test_input(I), phrase(ints(Is), I), init(256, Is).
-%@ 
 
 %?- phrase_from_file(ints(Is), "input06.txt"), init(256, Is).
