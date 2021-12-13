@@ -1,6 +1,8 @@
 :- use_module(library(dcg/basics)).
 :- use_module(library(clpfd)).
 
+:- table map_well_neighbors/4.
+
 test_input(`2199943210
 3987894921
 9856789892
@@ -22,20 +24,6 @@ adjacent_pos(pos(X,Y0), pos(X,Y1)) :- succ(Y0, Y1).
 adjacent_pos(pos(X,Y0), pos(X,Y1)) :- succ(Y1, Y0).
 %?- adjacent_pos(pos(1,1), A).
 
-%% map_contains([R|Rs], pos(X,Y)) :-
-%%     length(R, W),
-%%     length([R|Rs], H),
-%%     0 #< W,
-%%     0 #< H,
-%%     X #< W,
-%%     Y #< H.
-%?- map_contains([[1,1], [1,1]], pos(X,Y)).
-
-%% adjacent_map_pos(M, P0, P1) :-
-%%     adjacent_pos(P0, P1),
-%%     map_contains(M, P1).
-%?- adjacent_map_pos([[1,1,1], [1,1,1], [1,1,1]], pos(1,1), A).
-
 get_value(pos(X,Y), M, V) :-
     nth0(Y, M, Row),
     nth0(X, Row, V).
@@ -50,8 +38,6 @@ adjacent_value(M, Pos, V) :-
 %?- adjacent_value([[1,2,3], [4,5,6], [7,8,9]], pos(1,1), V).
 %?- adjacent_value([[1,2,3], [4,5,6], [7,8,9]], P, 5).
 
-%% Working here
-%% map_well_neighbors(M, Well, Ns, Risk) :-
 map_well_neighbors(M, well(Well, Height, Min), Ns, Risk) :-
     get_value(Well, M, Height),
     % all heights adjacent (max of 4) to this well
@@ -75,6 +61,8 @@ test1(Answer) :-
 part1(Answer) :-
     phrase_from_file(heightmap(M), "input09.txt"),
     solve1(M, Answer).
-%?- part1(Answer).
+%?- time(part1(Answer)).
+%@ % 110,748 inferences, 0.013 CPU in 0.015 seconds (88% CPU, 8532861 Lips)
 %@ Answer = 504 ;
+%@ % 1,123 inferences, 0.000 CPU in 0.000 seconds (91% CPU, 4352713 Lips)
 %@ false.
