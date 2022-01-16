@@ -1,5 +1,6 @@
 :- use_module(library(dcg/basics)).
 :- use_module(library(chr)).
+:- use_module(library(clpfd)).
 
 :- chr_constraint fish/2, init/2, count/1.
 
@@ -37,10 +38,12 @@ ints([I|Is]) --> integer(I), `,`, ints(Is).
 %@ count(5934) ;
 %@ false.
 
-%?- phrase_from_file(ints(Is), "input06.txt"), init(80, Is).
+%?- phrase_from_file(ints(Is), "input06.txt"), time(init(80, Is)).
+%@ % 167,356,399 inferences, 18.602 CPU in 18.713 seconds (99% CPU, 8996651 Lips)
 %@ Is = [1, 3, 3, 4, 5, 1, 1, 1, 1|...],
 %@ count(363101) ;
 %@ false.
+
 
 step(0, [6, 8]).
 step(T0, [T1]) :- succ(T1, T0).
@@ -53,25 +56,35 @@ step_all([H0|T0], Updated) :-
 
 populate(0, Timers, Count) :- length(Timers, Count).
 populate(Day, T0, Count) :-
+    %% labeling(),
     succ(DayN, Day),
     step_all(T0, T1),
-    populate(DayN, T1, Count).
+    format('Day ~w\n', DayN),
+    populate(DayN, T1, Count),
+    true.
 %?- populate(80, [3, 4, 3, 1, 2], C).
 
-test1(Answer) :-
+test1(Days, Answer) :-
     test_input(Input),
     phrase(ints(Is), Input),
-    populate(80, Is, Answer).
-%?- test1(5934).
+    populate(Days, Is, Answer).
+%?- test1(80, 5934).
 
-part1(Answer) :-
+:- table step/2.
+%?- test1(80, 5934).
+
+part1(Days, Answer) :-
     phrase_from_file(ints(Is), "input06.txt"),
-    populate(80, Is, Answer).
-%?- part1(Answer).
-%@ ERROR: Stack limit (1.0Gb) exceeded
+    populate(Days, Is, Answer).
+%?- time(part1(80, Answer)).
+%@ % 31,965,624 inferences, 4.435 CPU in 4.921 seconds (90% CPU, 7206841 Lips)
+%@ Answer = 363101 ;
+%@ % 16 inferences, 0.015 CPU in 0.015 seconds (99% CPU, 1095 Lips)
+%@ false.
+
 
 %% Part 2:
 
-%?- test_input(I), phrase(ints(Is), I), init(256, Is).
+%?- test1(256, Answer).
 
-%?- phrase_from_file(ints(Is), "input06.txt"), init(256, Is).
+%?- part1(256, Answer).
