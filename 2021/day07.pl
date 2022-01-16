@@ -31,7 +31,6 @@ solve1(Locations, Target, Cost) :-
     max_member(Max, Locations),
     Target in Min..Max,
     cost(Target, Locations, Cost),
-    %% once(labeling([min(Cost), ff], [Cost, Target])).
     once(labeling([min(Cost), ff], [Cost, Target])).
 %?- solve1([16,1,2,0,4,2,7,1,2,14], Target, Cost).
 
