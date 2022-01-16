@@ -191,38 +191,6 @@ manhattan_dist(pos(X0,Y0,Z0), pos(X1,Y1,Z1), D) :-
     D #= Dx + Dy + Dz.
 %?- manhattan_dist(pos(0,0,0), pos(1,2,3), D).
 
-rotate90(pos(X,Y,Z), x, pos(X, Z, NegY)) :- NegY #= -Y.
-rotate90(pos(X,Y,Z), y, pos(NegZ, Y, X)) :- NegZ #= -Z.
-rotate90(pos(X,Y,Z), z, pos(Y, NegX, Z)) :- NegX #= -X.
-%?- rotate90(pos(1,2,3), x, R).
-%?- rotate90(pos(1,2,3), y, R).
-%?- rotate90(pos(1,2,3), z, R).
-%?- rotate90(pos(1,2,3), _, R).
-
-rotate180(P, Axis, R) :-
-    rotate90(P, Axis, Quarter),
-    rotate90(Quarter, Axis, R).
-rotate270(P, Axis, R) :-
-    rotate180(P, Axis, Half),
-    rotate90(Half, Axis, R).
-
-rotate_all_90(P, _, P).
-rotate_all_90(P, Axis, R) :- rotate90(P, Axis, R).
-rotate_all_90(P, Axis, R) :- rotate180(P, Axis, R).
-rotate_all_90(P, Axis, R) :- rotate270(P, Axis, R).
-%?- rotate_all_90(pos(1,2,3), y, R).
-
-pos_orientation(P, O) :-
-    rotate_all_90(P, z, R),
-    rotate_all_90(R, y, O).
-pos_orientation(P, O) :-
-    rotate90(P, y, R),
-    rotate_all_90(R, z, O).
-pos_orientation(P, O) :-
-    rotate270(P, y, R),
-    rotate_all_90(R, z, O).
-%?- pos_orientation(pos(1,2,3), O).
-
 product_sum(A, B, Init, Init + A*B).
 %% product_sum(A, B, Init, Sum) :- Sum #= Init + A*B.
 dot_product([A|As], [B|Bs], C) :-
@@ -241,6 +209,12 @@ matrix_multiply(A, B, C) :-
 %@ R = [[1*1+2*1, 1*1+2*1, 1*1+2*1], [3*1+4*1, 3*1+4*1, 3*1+4*1], [5*1+6*1, 5*1+6*1, 5*1+6*1]],
 %@ C = [[3, 3, 3], [7, 7, 7], [11, 11, 11]].
 
+pos_matrix(pos(X,Y,Z), [[X], [Y], [Z]]).
+
+identity([[1,0,0],
+          [0,1,0],
+          [0,0,1]]).
+
 rotate90(x, [[1,0,0],
              [0,0,-1],
              [0,1,0]]).
@@ -257,16 +231,17 @@ rotate180(Axis, M) :-
 matrix_is(E, M) :- maplist(maplist(is), E, M).
 
 rotations(Axis, M) :- rotations(Axis, 4, M).
-rotations(Axis, 1, M) :- rotate90(Axis, M).
+rotations(_, N, [[1,0,0],
+                 [0,1,0],
+                 [0,0,1]]) :- 0 #< N.
 rotations(Axis, N, M) :-
-    1 #< N,
     rotate90(Axis, Quarter),
-    ( M = Quarter
-    ; ( succ(Next, N),
-        rotations(Axis, Next, Half),
-        matrix_multiply(Quarter, Half, Evaluated),
-        matrix_is(M, Evaluated))).
-%?- rotations(x, M).
+    succ(Next, N),
+    rotations(Axis, Next, Identity),
+    matrix_multiply(Quarter, Identity, Evaluated),
+    matrix_is(M, Evaluated).
+%?- time(findall(M, rotations(x, M), Bag)).
+
 
 faces(M) :- rotate90(z, M).
 faces(M) :-
@@ -276,12 +251,7 @@ faces(M) :-
     matrix_is(M, E).
 faces(M) :- rotations(x, M).
 %?- faces(M).
-%@ M = [[0, -1, 0], [1, 0, 0], [0, 0, 1]] ;
-%@ M = [[0, 1, 0], [-1, 0, 0], [0, 0, 1]] ;
-%@ M = [[1, 0, 0], [0, 0, -1], [0, 1, 0]] ;
-%@ M = [[1, 0, 0], [0, -1, 0], [0, 0, -1]] ;
-%@ M = [[1, 0, 0], [0, 0, 1], [0, -1, 0]] ;
-%@ M = [[1, 0, 0], [0, 1, 0], [0, 0, 1]] ;
-%@ false.
+
+%?- pos_matrix(pos(1,2,3), P), faces(T), matrix_multiply(T, P, M), matrix_is(E, M).
 
 %% pos_translations(_, _)
