@@ -104,4 +104,4 @@ solve2(Ans) :-
     elves_sorted_calories(Elves, [A,B,C|_]),
     Ans #= A + B + C.
 %?- solve2(Ans).
-% Ans = 68467
+% Ans = 203420
