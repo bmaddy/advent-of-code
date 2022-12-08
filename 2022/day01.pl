@@ -65,20 +65,23 @@ elves([E|Es]) --> elf(E), "\n\n", elves(Es).
 
 total_calories(L, T) :- sum(L, #=, T).
 
-elves_max_calories(Elves, Max) :-
-    maplist(total_calories, Elves, Totals),
-    max_list(Totals, Max).
+elves_sorted_calories(Elves, Cs) :-
+    maplist(total_calories, Elves, Unsorted),
+    sort(Unsorted, Sorted),
+    reverse(Sorted, Cs).
 
 test1(Ans) :-
     test_input(Input),
     phrase(elves(Elves), Input),
-    elves_max_calories(Elves, Ans).
+    elves_sorted_calories(Elves, [Ans|_]).
 %?- test1(Ans).
+% Ans = 24000
 
 solve1(Ans) :-
     phrase_from_file(elves(Elves), "input01.txt"),
-    elves_max_calories(Elves, Ans).
+    elves_sorted_calories(Elves, [Ans|_]).
 %?- solve1(Ans).
+% Ans = 68467
 
 % :- dynamic elf_snack/2.
 
@@ -87,3 +90,18 @@ solve1(Ans) :-
 %     % retractall(elf_snack(_,_)),
 %     % forall(member(Fact, Facts),
 %     %       assertz(Fact)),
+
+test2(Ans) :-
+    test_input(Input),
+    phrase(elves(Es), Input),
+    elves_sorted_calories(Es, [A,B,C|_]),
+    Ans #= A + B + C.
+%?- test2(Ans).
+% Ans = 45000
+
+solve2(Ans) :-
+    phrase_from_file(elves(Elves), "input01.txt"),
+    elves_sorted_calories(Elves, [A,B,C|_]),
+    Ans #= A + B + C.
+%?- solve2(Ans).
+% Ans = 68467
