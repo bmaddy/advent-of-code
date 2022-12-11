@@ -14,9 +14,11 @@
 
 :- use_module(library(clpfd)).
 
+% :- use_module(util).
+
 setup :-
     portray_text(true),
-    working_directory(_, "/home/bmaddy/src/bmaddy/adventofcode/2022").
+    working_directory(_, "/home/bmaddy/src/bmaddy/adventofcode/2022/").
 
 % ... --> [] | [_], ... .
 
