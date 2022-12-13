@@ -5,7 +5,6 @@
 :- autoload(library(aggregate), [ aggregate_all/3
                                 ]).
 
-% :- use_module(util).
 :- use_module(library(clpfd)).
 
 :- autoload(library(lists), [ append/3,
