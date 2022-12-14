@@ -1,30 +1,18 @@
 :- use_module(library(chr)).
 
-:- chr_constraint round/1, monkey/1, item/2, inspected/2.
+:- chr_constraint round/1, curr/1, monkey/5, item/2, inspected/2.
 
-monkey(0) \ item(0, I0) <=> I is div(I0*19, 3), inspected(0, I).
-monkey(0) \ inspected(0, I) <=> I mod 23 =:= 0 | item(2, I).
-monkey(0) \ inspected(0, I) <=> I mod 23 =\= 0 | item(3, I).
+curr(M), monkey(M, Op, _, _, _) \ item(M, I0) <=> call(Op, I0, I1),
+                                                  I is div(I1, 3),
+                                                  inspected(M, I).
+curr(M), monkey(M, _, D, N, _) \ inspected(M, I) <=> I mod D =:= 0 | item(N, I).
+curr(M), monkey(M, _, D, _, N) \ inspected(M, I) <=> I mod D =\= 0 | item(N, I).
 
-monkey(0) <=> monkey(1).
+monkey(N, _, _, _, _) \ curr(M) <=> N =:= M+1 | curr(N).
+round(R), curr(_) <=> R < 20 | round(R+1), curr(0).
 
-monkey(1) \ item(1, I0) <=> I is div(I0+6, 3), inspected(1, I).
-monkey(1) \ inspected(1, I) <=> I mod 19 =:= 0 | item(2, I).
-monkey(1) \ inspected(1, I) <=> I mod 19 =\= 0 | item(0, I).
-
-monkey(1) <=> monkey(2).
-
-monkey(2) \ item(2, I0) <=> I is div(I0*I0, 3), inspected(2, I).
-monkey(2) \ inspected(2, I) <=> I mod 13 =:= 0 | item(1, I).
-monkey(2) \ inspected(2, I) <=> I mod 13 =\= 0 | item(3, I).
-
-monkey(2) <=> monkey(3).
-
-monkey(3) \ item(3, I0) <=> I is div(I0+3, 3), inspected(3, I).
-monkey(3) \ inspected(3, I) <=> I mod 17 =:= 0 | item(0, I).
-monkey(3) \ inspected(3, I) <=> I mod 17 =\= 0 | item(1, I).
-
-round(N), monkey(3) <=> N < 20 | round(N+1), monkey(0).
+mul(A, B, C) :- C is A*B.
+square(A, B) :- B is A*A.
 
 test_input :-
     maplist(item(0), [79, 98]),
@@ -32,5 +20,10 @@ test_input :-
     maplist(item(2), [79, 60, 97]),
     maplist(item(3), [74]),
 
+    monkey(0, mul(19), 23, 2, 3),
+    monkey(1, plus(6), 19, 2, 0),
+    monkey(2, square, 13, 1, 3),
+    monkey(3, plus(3), 17, 0, 1),
+
     round(1),
-    monkey(0).
+    curr(0).
