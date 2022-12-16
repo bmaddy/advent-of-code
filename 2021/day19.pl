@@ -66,6 +66,7 @@ test1() :-
 %?- test1().
 %?- findall(P, scanner_detection(4, P), All), length(All, Len).
 
+% ERROR: major bug here, see 2022/util.pl:manhattan_dist
 manhattan_dist(pos(X0,Y0,Z0), pos(X1,Y1,Z1), D) :-
     plus(X0, Dx, X1),
     plus(Y0, Dy, Y1),
