@@ -10,18 +10,8 @@
 %% Example:
 %% https://github.com/mthom/scryer-prolog/blob/ea02b54e7fc164f026e4f52702088d5b0146c2a3/src/lib/simplex.pl#L1310
 
-digit(D) --> [D], { char_type(D, decimal_digit) }.
-
-number([D|Ds]) --> digit(D), number(Ds).
-number([D])    --> digit(D).
-
-integer(N) --> number(Ds), !, ws, { number_chars(N, Ds) }.
-
-integers([N|Ns]) --> integer(N), ws, integers(Ns).
-integers([N])    --> integer(N).
-
-ws --> [W], { char_type(W, whitespace) }, !, ws.
-ws --> [].
+%% ws --> [W], { char_type(W, whitespace) }, !, ws.
+%% ws --> [].
 
 
 
@@ -55,32 +45,51 @@ ws --> [].
 %%       { Ls = [L | T] }
 %%     ; { Ls = [] }).
 
+digit(D) --> [D], { char_type(D, decimal_digit) }.
 
+number([D|Ds]) --> digit(D), number(Ds), !.
+number([D])    --> digit(D).
 
+integer(N) --> number(Ds), { number_chars(N, Ds) }.
+
+integers([N|Ns]) --> integer(N), ws, integers(Ns), !.
+integers([N])    --> integer(N).
+
+ws --> " ", ws, !.
+ws --> " ".
+%% ?- phrase(ws, "  ", T).
+
+%% ?- phrase(integers(L), "11 22  33\n44 55  66", T).
+
+%% line([C|Cs]) --> [C], { C \= '\n' }, line(Cs), !.
+%% line([C]) --> [C], { C \= '\n' }.
 line([C|Cs]) --> [C], { C \= '\n' }, line(Cs), !.
 line([C]) --> [C], { C \= '\n' }.
-%% line([]) --> "\n", !.
-%% line([]) --> [].
 %% ?- phrase(line(L), [], T).
 %% ?- phrase(line(L), "", T).
 %% ?- phrase(line(L), "a", T).
 %% ?- phrase(line(L), "aa", T).
 %% ?- phrase(line(L), "aa\n", T).
 %% ?- phrase(line(L), "aa\nbb", T).
+%% ?- phrase(line(L), "11 22  33\n44 55  66", T).
+
+%% %% line([I|Is]) --> integer(I), ws, line(Is), !.
+%% line([I]) --> integer(I).
+%% %% line([I]) --> integer(I).
+%% %% ?- phrase(line(L), "11 22  33\n44 55  66", T).
+
 
 eos([], []).
 
-%% lines([]) --> [].
 lines([]) --> eos.
-%% lines([]) --> "\n".
-lines([L]) --> line(L), eos.
-lines([L|Ls]) --> line(L), "\n", lines(Ls).
-%% lines([L]) --> line(L), [].
+lines([L]) --> integers(L), eos, !.
+lines([L|Ls]) --> integers(L), "\n", lines(Ls).
 %% ?- phrase(lines(L), "", T).
 %% ?- phrase(lines(L), "aa", T).
 %% ?- phrase(lines(L), "aa\n", T).
 %% ?- phrase(lines(L), "aa\nbb", T).
 %% ?- phrase(lines(L), "aa\nbb\ncc", T).
+%% ?- phrase(lines(L), "11 22  33\n44 55  66", T).
 
 
 %% ?- char_type('\n', S).
