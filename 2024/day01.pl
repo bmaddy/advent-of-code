@@ -3,6 +3,7 @@
 :- use_module(library(pio), [ phrase_from_file/2
                           ]).
 :- use_module(library(lists)).
+:- use_module(library(pairs)).
 
 %% https://www.scryer.pl/csv
 %% https://www.scryer.pl/builtins.html#open/3
@@ -34,3 +35,25 @@ lines([L|Ls]) --> integers(L), "\n", lines(Ls).
 test_input("3   4\n4   3\n2   5\n1   3\n3   9\n3   3").
 %% ?- test_input(I), phrase(lines(L), I, S).
 
+%% sort the preserves duplicates
+samsort(Ls0, Ls) :-
+    pairs_keys(Pairs0, Ls0),
+    keysort(Pairs0, Pairs),
+    pairs_keys(Pairs, Ls).
+
+input_distance(Ls, L2) :-
+    transpose(Ls, [L, R]),
+    samsort(L, L2),
+    samsort(R, R2).
+%% ?- test1(Ans).
+
+test1(Ans) :-
+    test_input(I),
+    phrase(lines(L), I),
+    input_distance(L, Ans).
+%% ?- test1(Ans).
+% Ans = 26
+
+solve1(Ans) :-
+    read_file_to_codes("input15.txt", I, []),
+    input_distance(I, Ans).
