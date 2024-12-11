@@ -1,3 +1,4 @@
+:- use_module(library(clpz)).
 :- use_module(library(charsio)).
 :- use_module(library(dcgs)).
 :- use_module(library(pio), [ phrase_from_file/2
@@ -41,10 +42,20 @@ samsort(Ls0, Ls) :-
     keysort(Pairs0, Pairs),
     pairs_keys(Pairs, Ls).
 
-input_distance(Ls, L2) :-
+difference_sum([], [], 0).
+difference_sum([A|As], [B|Bs], N) :-
+    D #= abs(A - B),
+    N #= N1 + D,
+    difference_sum(As, Bs, N1).
+%% ?- difference_sum([], [], N).
+%% ?- difference_sum([1], [3], N).
+%% ?- difference_sum([1,2], [3,3], N).
+
+input_distance(Ls, D) :-
     transpose(Ls, [L, R]),
-    samsort(L, L2),
-    samsort(R, R2).
+    samsort(L, L1),
+    samsort(R, R1),
+    difference_sum(L1, R1, D).
 %% ?- test1(Ans).
 
 test1(Ans) :-
@@ -52,8 +63,10 @@ test1(Ans) :-
     phrase(lines(L), I),
     input_distance(L, Ans).
 %% ?- test1(Ans).
-% Ans = 26
+%%    Ans = 11.
 
 solve1(Ans) :-
-    read_file_to_codes("input15.txt", I, []),
-    input_distance(I, Ans).
+    phrase_from_file(lines(L), "input01.txt"),
+    input_distance(L, Ans).
+%% ?- solve1(Ans).
+%%    Ans = 3246517
