@@ -50,13 +50,26 @@ difference_sum([A|As], [B|Bs], N) :-
 %% ?- difference_sum([], [], N).
 %% ?- difference_sum([1], [3], N).
 %% ?- difference_sum([1,2], [3,3], N).
+%% ?- difference_sum(A, B, 11).
+%% ?- difference_sum([1,4,1,5,9], [1,1,2,3,N], 11).
 
 input_distance(Ls, D) :-
     transpose(Ls, [L, R]),
     samsort(L, L1),
     samsort(R, R1),
     difference_sum(L1, R1, D).
-%% ?- test1(Ans).
+%% ?- input_distance(Ls, 11).
+
+member_count(_, [], 0).
+member_count(X, [L|Ls], N) :-
+    ( X == L
+    -> N #= N1 + 1
+    ; N #= N1
+    ),
+    member_count(X, Ls, N1).
+%% ?- member_count('a', "abba", N).
+%% ?- member_count(X, "abba", 2).
+%% ?- member_count('a', S, 2).
 
 test1(Ans) :-
     test_input(I),
@@ -70,3 +83,16 @@ solve1(Ans) :-
     input_distance(L, Ans).
 %% ?- solve1(Ans).
 %%    Ans = 3246517
+
+test2(Ans) :-
+    test_input(I),
+    phrase(lines(L), I),
+    input_distance(L, Ans).
+%% ?- test2(Ans).
+%%
+%%?- member(Z, "abba").
+
+solve2(Ans) :-
+    phrase_from_file(lines(L), "input01.txt"),
+    input_distance(L, Ans).
+%% ?- solve2(Ans).
